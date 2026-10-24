@@ -21,14 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The secrets context is not available in step-level "if" expressions
+      # (it invalidates the whole workflow), so it is surfaced to this step
+      # through step-level env — which is the sanctioned place for it — and
+      # the guard reads the env context instead.
       - name: Check out SilkyEvCam HAL plugin sources (optional)
         id: silky
-        if: ${{ secrets.EBPLUS_CI_TOKEN != '' }}
+        if: env.EBPLUS_CI_TOKEN != ''
         continue-on-error: true
+        env:
+          EBPLUS_CI_TOKEN: ${{ secrets.EBPLUS_CI_TOKEN }}
         uses: actions/checkout@v4
         with:
           repository: Ziqing7226/test
-          token: ${{ secrets.EBPLUS_CI_TOKEN }}
+          token: ${{ env.EBPLUS_CI_TOKEN }}
           path: firmware-plugin
 
       - name: Overlay SilkyEvCam HAL plugin into vendored OpenEB
