@@ -24,6 +24,7 @@ jobs:
       # unaffected and simply skips the plugin target.
       - name: Check out SilkyEvCam HAL plugin sources (optional)
         id: silky
+        if: ${{ secrets.EBPLUS_CI_TOKEN != '' }}
         continue-on-error: true
         uses: actions/checkout@v4
         with:
@@ -59,6 +60,7 @@ jobs:
             -DBUILD_SAMPLES=OFF \
             -DBUILD_APPS=OFF \
             -DCOMPILE_PYTHON3_BINDINGS=OFF \
+            "-DMETAVISION_SELECTED_MODULES=base;core;stream" \
             -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/openeb-install"
           cmake --build build/openeb --target install --parallel
 

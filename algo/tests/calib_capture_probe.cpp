@@ -33,6 +33,7 @@
 #include <opencv2/objdetect.hpp>
 #include <opencv2/calib.hpp>
 #include <opencv2/geometry.hpp>
+#include <opencv2/2d.hpp>   // boundingRect etc. left imgproc in 5.0
 #else
 #include <opencv2/calib3d.hpp>
 #endif

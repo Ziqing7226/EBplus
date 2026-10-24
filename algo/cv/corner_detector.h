@@ -44,6 +44,13 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+// OpenCV 5.0 moved the 2D geometry helpers (convexHull, contourArea,
+// boundingRect, minAreaRect, ...) from imgproc to the new 2d module; the
+// imgproc.hpp of 5.x no longer declares them. Include 2d.hpp on v5+;
+// CV_MAJOR_VERSION comes from the core.hpp include above.
+#if CV_MAJOR_VERSION >= 5
+#include <opencv2/2d.hpp>
+#endif
 
 #include <metavision/sdk/base/utils/timestamp.h>
 

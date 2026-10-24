@@ -23,6 +23,7 @@ jobs:
 
       - name: Check out SilkyEvCam HAL plugin sources (optional)
         id: silky
+        if: ${{ secrets.EBPLUS_CI_TOKEN != '' }}
         continue-on-error: true
         uses: actions/checkout@v4
         with:
@@ -82,7 +83,10 @@ jobs:
 
       - name: Build vendored OpenEB (SDK + HAL plugins)
         run: |
-          cmake -S openeb -B build/openeb -A x64 `
+          # Pinned to VS 2022: the image's default VS 18 2026 preview has no
+          # CMake-generator support yet and Qt ships no msvc2026 binaries.
+          # When the ecosystem catches up, only these two -G switches change.
+          cmake -S openeb -B build/openeb -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE=openeb/cmake/toolchains/vcpkg.cmake `
             -DVCPKG_DIRECTORY="$env:GITHUB_WORKSPACE/vcpkg" `
             -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
@@ -97,7 +101,7 @@ jobs:
 
       - name: Configure EBplus
         run: |
-          cmake -S . -B build -A x64 `
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
             -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `

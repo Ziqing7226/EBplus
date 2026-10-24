@@ -20,6 +20,7 @@ jobs:
 
       - name: Check out SilkyEvCam HAL plugin sources (optional)
         id: silky
+        if: ${{ secrets.EBPLUS_CI_TOKEN != '' }}
         continue-on-error: true
         uses: actions/checkout@v4
         with:
