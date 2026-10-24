@@ -1,0 +1,114 @@
+name: Windows 11
+
+on:
+  push:
+    branches: [main, develop-cross-platform]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build + test (Windows x86_64, MSVC)
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out SilkyEvCam HAL plugin sources (optional)
+        id: silky
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: Ziqing7226/test
+          token: ${{ secrets.EBPLUS_CI_TOKEN }}
+          path: firmware-plugin
+
+      - name: Overlay SilkyEvCam HAL plugin into vendored OpenEB
+        if: steps.silky.outcome == 'success'
+        shell: pwsh
+        run: |
+          Copy-Item firmware-plugin/src/silky_common.cpp      openeb/hal_psee_plugins/src/plugin/
+          Copy-Item firmware-plugin/src/CMakeLists.plugin.txt openeb/hal_psee_plugins/src/plugin/CMakeLists.txt
+          Copy-Item firmware-plugin/src/CMakeLists.lib.txt    openeb/hal_psee_plugins/lib/CMakeLists.txt
+
+      - name: Install Qt 6 (msvc2022 x64)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          arch: win64_msvc2022_64
+          archives: 'qtbase qtsvg'
+          cache: true
+
+      # Prebuilt OpenCV is much faster than a vcpkg source build; everything
+      # else comes from vcpkg (the officially supported dependency channel of
+      # the vendored OpenEB, see openeb/utils/windows/11/vcpkg-openeb.json).
+      - name: Install OpenCV (official prebuilt)
+        run: |
+          New-Item -ItemType Directory -Force -Path deps | Out-Null
+          Invoke-WebRequest `
+            'https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe' `
+            -OutFile deps\opencv-installer.exe
+          Start-Process -FilePath deps\opencv-installer.exe `
+            -ArgumentList '-o',"$env:GITHUB_WORKSPACE\deps\opencv",'-y' -Wait
+          Test-Path deps/opencv/opencv/build/OpenCVConfig.cmake
+
+      - name: Set up vcpkg
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git "$env:GITHUB_WORKSPACE/vcpkg"
+          & "$env:GITHUB_WORKSPACE\vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+
+      - name: Cache vcpkg installed tree
+        uses: actions/cache@v4
+        with:
+          path: vcpkg/installed
+          key: vcpkg-x64-windows-openeb-v2
+          restore-keys: vcpkg-x64-windows-openeb-
+
+      - name: Install vcpkg dependencies
+        run: >
+          & "$env:GITHUB_WORKSPACE\vcpkg\vcpkg.exe" install
+          --triplet x64-windows
+          dirent boost-program-options boost-timer boost-chrono boost-thread
+          libusb protobuf "hdf5[cpp,threadsafe,zlib]" gtest
+
+      - name: Build vendored OpenEB (SDK + HAL plugins)
+        run: |
+          cmake -S openeb -B build/openeb -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE=openeb/cmake/toolchains/vcpkg.cmake `
+            -DVCPKG_DIRECTORY="$env:GITHUB_WORKSPACE/vcpkg" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_TESTING=OFF `
+            -DBUILD_SAMPLES=OFF `
+            -DBUILD_APPS=OFF `
+            -DCOMPILE_PYTHON3_BINDINGS=OFF `
+            -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/build/openeb-install"
+          cmake --build build/openeb --config Release --target install --parallel
+
+      - name: Configure EBplus
+        run: |
+          cmake -S . -B build -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/opencv/build" `
+            -DCMAKE_PREFIX_PATH="$env:GITHUB_WORKSPACE/build/openeb-install"
+
+      - name: Build EBplus
+        run: cmake --build build --config Release --parallel
+
+      - name: Run unit tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Upload EBplus binary
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: EBplus-windows-x86_64
+          path: build/gui/Release/gui_for_openeb.exe
+          retention-days: 7

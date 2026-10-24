@@ -1,0 +1,130 @@
+name: macOS
+
+on:
+  push:
+    branches: [main, develop-cross-platform]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-app:
+    name: Build Apple Silicon app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out SilkyEvCam HAL plugin sources (optional)
+        id: silky
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: Ziqing7226/test
+          token: ${{ secrets.EBPLUS_CI_TOKEN }}
+          path: firmware-plugin
+
+      - name: Overlay SilkyEvCam HAL plugin into vendored OpenEB
+        if: steps.silky.outcome == 'success'
+        run: |
+          cp firmware-plugin/src/silky_common.cpp      openeb/hal_psee_plugins/src/plugin/
+          cp firmware-plugin/src/CMakeLists.plugin.txt openeb/hal_psee_plugins/src/plugin/CMakeLists.txt
+          cp firmware-plugin/src/CMakeLists.lib.txt    openeb/hal_psee_plugins/lib/CMakeLists.txt
+
+      - name: Install build dependencies
+        run: brew install cmake qtbase qtsvg opencv boost libusb protobuf abseil hdf5 ripgrep
+
+      - name: Build bundle
+        run: CREATE_DMG=OFF OPENEB_HDF5_DISABLED=OFF ./scripts/build_macos_app.sh
+
+      - name: Verify packaging configuration
+        run: |
+          bash tests/macos/test_plugin_loader_config.sh
+          bash tests/macos/test_release_bundle_config.sh
+          bash tests/macos/test_packaged_bundle.sh
+
+      - name: Upload app artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: EBplus-macos-arm64-app
+          path: build/dist/EBplus.app
+          retention-days: 7
+
+  unit-tests:
+    name: Run Apple Silicon tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out SilkyEvCam HAL plugin sources (optional)
+        id: silky
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: Ziqing7226/test
+          token: ${{ secrets.EBPLUS_CI_TOKEN }}
+          path: firmware-plugin
+
+      - name: Overlay SilkyEvCam HAL plugin into vendored OpenEB
+        if: steps.silky.outcome == 'success'
+        run: |
+          cp firmware-plugin/src/silky_common.cpp      openeb/hal_psee_plugins/src/plugin/
+          cp firmware-plugin/src/CMakeLists.plugin.txt openeb/hal_psee_plugins/src/plugin/CMakeLists.txt
+          cp firmware-plugin/src/CMakeLists.lib.txt    openeb/hal_psee_plugins/lib/CMakeLists.txt
+
+      - name: Install build and test dependencies
+        run: brew install cmake qtbase qtsvg opencv boost libusb protobuf abseil hdf5 googletest ripgrep
+
+      - name: Build vendored OpenEB runtime
+        run: CREATE_DMG=OFF OPENEB_HDF5_DISABLED=OFF ./scripts/build_macos_app.sh
+
+      - name: Configure and run CTest
+        run: |
+          cmake -S . -B build/macos-tests \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DGUI_FOR_OPENEB_BUILD_TESTS=ON \
+            -DGUI_BUILD_TESTS=ON \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/build/openeb-install;$(brew --prefix)"
+          cmake --build build/macos-tests --parallel
+          ctest --test-dir build/macos-tests --output-on-failure
+
+  package-dmg:
+    name: Package Apple Silicon DMG
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out SilkyEvCam HAL plugin sources (optional)
+        id: silky
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: Ziqing7226/test
+          token: ${{ secrets.EBPLUS_CI_TOKEN }}
+          path: firmware-plugin
+
+      - name: Overlay SilkyEvCam HAL plugin into vendored OpenEB
+        if: steps.silky.outcome == 'success'
+        run: |
+          cp firmware-plugin/src/silky_common.cpp      openeb/hal_psee_plugins/src/plugin/
+          cp firmware-plugin/src/CMakeLists.plugin.txt openeb/hal_psee_plugins/src/plugin/CMakeLists.txt
+          cp firmware-plugin/src/CMakeLists.lib.txt    openeb/hal_psee_plugins/lib/CMakeLists.txt
+
+      - name: Install build dependencies
+        run: brew install cmake qtbase qtsvg opencv boost libusb protobuf abseil hdf5 ripgrep
+
+      - name: Build bundle and DMG
+        run: OPENEB_HDF5_DISABLED=OFF ./scripts/build_macos_app.sh
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EBplus-macos-arm64-dmg
+          path: build/dist/*.dmg
+          retention-days: 14

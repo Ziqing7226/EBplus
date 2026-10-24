@@ -38,8 +38,9 @@ qt_stderr*.log
 # ---- Metavision raw file index cache ----
 *.tmp_index
 
-# ---- User-private launcher (local env customisation) ----
+# ---- User-private launchers (local env customisation) ----
 run.local.sh
+run.local.bat
 
 # ---- Python (for future tooling) ----
 __pycache__/

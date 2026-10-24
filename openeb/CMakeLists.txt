@@ -226,8 +226,26 @@ if (COMPILE_PYTHON3_BINDINGS OR BUILD_TESTING)
     include(python3)
 endif ()
 
-# OpenCV
-find_package(OpenCV COMPONENTS core highgui imgproc videoio imgcodecs calib3d objdetect REQUIRED)
+# OpenCV — calib3d was split into calib/3d/stereo in OpenCV 5.0; probe the
+# version first, then require the correct component names.
+find_package(OpenCV REQUIRED)
+if(OpenCV_VERSION VERSION_GREATER_EQUAL "5.0")
+    # OpenCV 5.0 split calib3d into multiple modules (calib, 3d/geometry,
+    # stereo, ptcloud). The exact names vary across 5.x packaging — the
+    # "3d" module was renamed to "geometry" before the final 5.0.0 release,
+    # and Homebrew's opencv 5.0.0 does not expose a "3d" component. Probe
+    # which components are actually provided and only require those that
+    # exist, so the build works across OpenCV 5.x packaging variants.
+    set(_OPENCV_CALIB_COMPONENTS "")
+    foreach(_comp calib 3d geometry stereo ptcloud)
+        if(TARGET opencv_${_comp})
+            list(APPEND _OPENCV_CALIB_COMPONENTS ${_comp})
+        endif()
+    endforeach()
+else()
+    set(_OPENCV_CALIB_COMPONENTS calib3d)
+endif()
+find_package(OpenCV COMPONENTS core highgui imgproc videoio imgcodecs ${_OPENCV_CALIB_COMPONENTS} objdetect REQUIRED)
 
 # HDF5
 if (NOT ANDROID AND NOT HDF5_DISABLED)

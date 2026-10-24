@@ -6,7 +6,22 @@
 #include <cmath>
 #include <filesystem>
 
+// OpenCV 5.0 split calib3d across multiple modules: calibrateCamera and
+// initUndistortRectifyMap stayed in the new calib module, while the
+// chessboard/circle-grid pattern detection functions (findChessboardCorners,
+// drawChessboardCorners, findCirclesGrid, CALIB_CB_*) moved to objdetect, and
+// undistortPoints moved to geometry. The calib3d.hpp shim shipped by some 5.x
+// packagings (e.g. Homebrew) does not pull in the full declarations, so on
+// v5+ we include objdetect.hpp, calib.hpp and geometry.hpp directly. On v4.x
+// the historical calib3d.hpp still has everything. CV_MAJOR_VERSION is
+// provided by intrinsic.h's <opencv2/core.hpp> include above.
+#if CV_MAJOR_VERSION >= 5
+#include <opencv2/objdetect.hpp>
+#include <opencv2/calib.hpp>
+#include <opencv2/geometry.hpp>
+#else
 #include <opencv2/calib3d.hpp>
+#endif
 #include <opencv2/imgproc.hpp>
 
 #include <opencv2/core/persistence.hpp>

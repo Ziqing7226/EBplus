@@ -1,0 +1,83 @@
+name: Ubuntu 26.04
+
+on:
+  push:
+    branches: [main, develop-cross-platform]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build + test (Ubuntu 26.04, GCC 15)
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # The SilkyEvCam HAL plugin lives in a separate, closed-source repo.
+      # It is checked out only when a token with access is configured
+      # (secret EBPLUS_CI_TOKEN); without it the rest of the build is
+      # unaffected and simply skips the plugin target.
+      - name: Check out SilkyEvCam HAL plugin sources (optional)
+        id: silky
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: Ziqing7226/test
+          token: ${{ secrets.EBPLUS_CI_TOKEN }}
+          path: firmware-plugin
+
+      - name: Overlay SilkyEvCam HAL plugin into vendored OpenEB
+        if: steps.silky.outcome == 'success'
+        run: |
+          cp firmware-plugin/src/silky_common.cpp      openeb/hal_psee_plugins/src/plugin/
+          cp firmware-plugin/src/CMakeLists.plugin.txt openeb/hal_psee_plugins/src/plugin/CMakeLists.txt
+          cp firmware-plugin/src/CMakeLists.lib.txt    openeb/hal_psee_plugins/lib/CMakeLists.txt
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            libopencv-dev libboost-all-dev libusb-1.0-0-dev \
+            libprotobuf-dev protobuf-compiler \
+            libhdf5-dev hdf5-tools \
+            libglew-dev libglfw3-dev \
+            libgl-dev libglx-dev libopengl-dev \
+            qt6-base-dev qt6-base-dev-tools libqt6opengl6-dev libqt6svg6-dev \
+            libgtest-dev libgmock-dev
+
+      - name: Build vendored OpenEB (SDK + HAL plugins)
+        run: |
+          cmake -S openeb -B build/openeb -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF \
+            -DBUILD_SAMPLES=OFF \
+            -DBUILD_APPS=OFF \
+            -DCOMPILE_PYTHON3_BINDINGS=OFF \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/build/openeb-install"
+          cmake --build build/openeb --target install --parallel
+
+      - name: Configure EBplus
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/build/openeb-install"
+
+      - name: Build EBplus
+        run: cmake --build build --parallel
+
+      - name: Run unit tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Upload EBplus binary
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: EBplus-ubuntu26-x86_64
+          path: build/gui/gui_for_openeb
+          retention-days: 7

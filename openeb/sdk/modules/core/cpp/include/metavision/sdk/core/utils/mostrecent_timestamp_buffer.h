@@ -13,7 +13,10 @@
 #define METAVISION_SDK_CORE_MOSTRECENT_TIMESTAMP_BUFFER_H
 
 #include <opencv2/opencv.hpp>
-#if CV_MAJOR_VERSION >= 4
+// Note: <opencv2/imgproc/types_c.h> was removed in OpenCV 5.0 (the entire C
+// API was dropped). Nothing from that legacy header is used in this file, so
+// the include is only kept for OpenCV 4.x where it still exists.
+#if CV_MAJOR_VERSION >= 4 && CV_MAJOR_VERSION < 5
 #include <opencv2/imgproc/types_c.h>
 #endif
 

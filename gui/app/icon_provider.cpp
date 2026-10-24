@@ -6,7 +6,9 @@
 #include <QGuiApplication>
 #include <QHash>
 #include <QPalette>
+#include <QPainter>
 #include <QPixmap>
+#include <QSvgRenderer>
 
 namespace gui {
 
@@ -58,12 +60,21 @@ QIcon IconProvider::render(const QString& name, const QColor& color) {
     // both stroke-based and fill-based icons pick up the requested color.
     svg.replace(QStringLiteral("currentColor"), color.name());
 
-    // Render via the SVG image-format plugin (shipped by qt6-svg-plugins),
-    // which decodes the recolored SVG bytes into a QPixmap without requiring
-    // a build-time link to Qt6::Svg. The SVGs declare a 24x24 viewport, so
-    // the resulting pixmap is 24x24 and QIcon scales it on demand.
-    QPixmap pm;
-    if (!pm.loadFromData(svg.toUtf8(), "svg")) return QIcon();
+    // Render via QSvgRenderer (Qt6::Svg, linked at build time). Going through
+    // the plugin-based QImageReader instead would depend on the qt6-svg
+    // imageformat plugin being present at runtime, which is not guaranteed in
+    // packaged bundles (macOS .app, Windows installs).
+    QSvgRenderer renderer(svg.toUtf8());
+    if (!renderer.isValid()) return QIcon();
+
+    const QSize size = renderer.defaultSize().isEmpty()
+                           ? QSize(24, 24)
+                           : renderer.defaultSize();
+    QPixmap pm(size);
+    pm.fill(Qt::transparent);
+    QPainter painter(&pm);
+    renderer.render(&painter);
+    if (pm.isNull()) return QIcon();
     QIcon icon(pm);
     cache.insert(key, icon);
     return icon;
