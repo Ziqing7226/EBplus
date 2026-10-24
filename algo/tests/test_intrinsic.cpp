@@ -13,6 +13,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include <random>
 #include <vector>
 
@@ -44,7 +45,13 @@ SyntheticViews make_views(std::size_t n_views,
     const double fx = 500.0, fy = 500.0, cx = 320.0, cy = 240.0;
 
     SyntheticViews sv;
-    sv.K = (cv::Mat_<double>(3, 3) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
+    // cv::Mat_'s comma initializer is deprecated in OpenCV 5 — fill by hand.
+    sv.K = cv::Mat_<double>(3, 3);
+    {
+        double* k = sv.K.ptr<double>();
+        const double vals[9] = {fx, 0, cx, 0, fy, cy, 0, 0, 1};
+        for (int i = 0; i < 9; ++i) k[i] = vals[i];
+    }
 
     // Object grid: 9×6 inner corners at (c·20, r·20, 0) mm.
     for (int r = 0; r < kRows; ++r)
@@ -70,15 +77,15 @@ SyntheticViews make_views(std::size_t n_views,
             p.x += static_cast<float>(noise(rng));
             p.y += static_cast<float>(noise(rng));
         }
-        // Corrupt the view if requested (large coherent offset → huge RMS).
-        // The offset direction varies per view: a uniform shift is a
-        // degenerate case the solver can absorb into the principal point
-        // (LM basin choice differs per platform), which would make the
-        // rejection outcome platform-dependent.
+        // Corrupt the view if requested by shuffling the 2D point order, so
+        // the point-to-grid correspondence is wrong. A pixel shift is a bad
+        // choice here: the solver can fold a uniform shift into the principal
+        // point (which LM basin it picks differs per platform), making the
+        // rejection outcome platform-dependent. A shuffled correspondence is
+        // genuinely unfittable — the corrupted views' RMS stays an order of
+        // magnitude above the clean ones on every toolchain.
         if (i < corrupt.size() && corrupt[i]) {
-            const float dx = 200.0f * ((i % 2) ? 1.0f : -1.0f);
-            const float dy = 200.0f * ((i % 3) ? 1.0f : -1.0f);
-            for (auto& p : pts) { p.x += dx; p.y += dy; }
+            std::shuffle(pts.begin(), pts.end(), rng);
         }
         sv.image_points.push_back(std::move(pts));
     }

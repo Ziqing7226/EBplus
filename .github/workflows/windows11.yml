@@ -53,19 +53,11 @@ jobs:
           archives: 'qtbase qtsvg'
           cache: true
 
-      # Prebuilt OpenCV is much faster than a vcpkg source build; everything
-      # else comes from vcpkg (the officially supported dependency channel of
-      # the vendored OpenEB, see openeb/utils/windows/11/vcpkg-openeb.json).
-      - name: Install OpenCV (official prebuilt)
-        run: |
-          New-Item -ItemType Directory -Force -Path deps | Out-Null
-          Invoke-WebRequest `
-            'https://github.com/opencv/opencv/releases/download/4.10.0/opencv-4.10.0-windows.exe' `
-            -OutFile deps\opencv-installer.exe
-          Start-Process -FilePath deps\opencv-installer.exe `
-            -ArgumentList '-o',"$env:GITHUB_WORKSPACE\deps\opencv",'-y' -Wait
-          Test-Path deps/opencv/opencv/build/OpenCVConfig.cmake
-
+      # OpenCV comes from vcpkg like every other dependency: the official
+      # prebuilt Windows packages are vc16/vc17 builds that the OpenCVConfig
+      # in them rejects when the compiler is a newer MSVC, and building from
+      # source guarantees the ABI matches whatever VS instance the runner has.
+      # The vcpkg installed-tree cache absorbs the extra build time.
       - name: Set up vcpkg
         run: |
           git clone --depth 1 https://github.com/microsoft/vcpkg.git "$env:GITHUB_WORKSPACE/vcpkg"
@@ -84,7 +76,7 @@ jobs:
           --triplet x64-windows
           dirent boost-program-options boost-timer boost-chrono boost-thread
           boost-property-tree boost-math boost-assign boost-algorithm
-          boost-preprocessor
+          boost-preprocessor opencv4
           libusb protobuf "hdf5[cpp,threadsafe,zlib]" gtest
 
       - name: Detect Visual Studio generator
@@ -108,7 +100,6 @@ jobs:
           cmake -S openeb -B build/openeb -G "$env:GENERATOR" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/openeb/cmake/toolchains/vcpkg.cmake" `
             -DVCPKG_DIRECTORY="$env:GITHUB_WORKSPACE/vcpkg" `
-            -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
             -DCMAKE_BUILD_TYPE=Release `
             -DBUILD_TESTING=OFF `
             -DBUILD_SAMPLES=OFF `
@@ -123,7 +114,6 @@ jobs:
           cmake -S . -B build -G "$env:GENERATOR" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
             -DCMAKE_PREFIX_PATH="$env:GITHUB_WORKSPACE/build/openeb-install"
 
       - name: Build EBplus
@@ -131,7 +121,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          $env:PATH = "$env:GITHUB_WORKSPACE/build/openeb-install/bin;$env:GITHUB_WORKSPACE/deps/opencv/build/x64/vc16/bin;$env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/bin;$env:PATH"
+          $env:PATH = "$env:GITHUB_WORKSPACE/build/openeb-install/bin;$env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/bin;$env:PATH"
           $env:MV_HAL_PLUGIN_PATH = "$env:GITHUB_WORKSPACE/build/openeb-install/lib/metavision/hal/plugins"
           ctest --test-dir build -C Release --output-on-failure
 

@@ -51,6 +51,11 @@ __pycache__/
 # ---- Reference materials (third-party repos, not committed) ----
 ref/
 
+# ---- Closed-source SilkyEvCam plugin overlay (lives in the separate
+# "test" repository; the local build copies it into the vendored OpenEB
+# tree at build time only — it must never be committed here) ----
+openeb/hal_psee_plugins/src/plugin/silky_common.cpp
+
 # ---- Pretrained models (large binaries, not committed) ----
 # The conversion script (models/convert_to_onnx.py) IS committed; the
 # downloaded .pth.tar and the exported .onnx / .onnx.data are not —

@@ -165,8 +165,19 @@ int main(int argc, char** argv) {
             (std::filesystem::temp_directory_path() / "gui_test_calib.yml").string();
         cv::FileStorage fs(yml, cv::FileStorage::WRITE);
         fs << "image_width" << W << "image_height" << H;
-        cv::Mat K = (cv::Mat_<double>(3, 3) << 80, 0, 50, 0, 80, 50, 0, 0, 1);
-        cv::Mat dist = (cv::Mat_<double>(1, 5) << -0.25, 0.08, 0.0, 0.0, 0.0);
+        // comma initializer deprecated in OpenCV 5 — fill by hand.
+        cv::Mat K = cv::Mat_<double>(3, 3);
+        {
+            double* k = K.ptr<double>();
+            const double kv[9] = {80, 0, 50, 0, 80, 50, 0, 0, 1};
+            for (int i = 0; i < 9; ++i) k[i] = kv[i];
+        }
+        cv::Mat dist = cv::Mat_<double>(1, 5);
+        {
+            double* d = dist.ptr<double>();
+            const double dv[5] = {-0.25, 0.08, 0.0, 0.0, 0.0};
+            for (int i = 0; i < 5; ++i) d[i] = dv[i];
+        }
         fs << "camera_matrix" << K << "distortion_coefficients" << dist;
         fs.release();
 
