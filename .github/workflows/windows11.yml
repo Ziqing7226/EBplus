@@ -87,12 +87,25 @@ jobs:
           boost-preprocessor
           libusb protobuf "hdf5[cpp,threadsafe,zlib]" gtest
 
+      - name: Detect Visual Studio generator
+        run: |
+          # The image's VS lineup drifts (VS 2022 Enterprise 17.14 today, VS 26
+          # preview as the CMake default); pick whichever release instance with
+          # the VC tools actually answers vswhere, and export the generator for
+          # the two configure steps.
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          & $vswhere -latest -products * -format json | Write-Host
+          $path = & $vswhere -latest -products * `
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+            -property installationPath
+          if (-not $path) { throw 'No Visual Studio instance with VC tools found' }
+          $gen = if ($path -like '*\2022\*') { 'Visual Studio 17 2022' } else { 'Visual Studio 18 2026' }
+          Write-Host "Using generator: $gen (instance: $path)"
+          "GENERATOR=$gen" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build vendored OpenEB (SDK + HAL plugins)
         run: |
-          # Pinned to VS 2022: the image's default VS 18 2026 preview has no
-          # CMake-generator support yet and Qt ships no msvc2026 binaries.
-          # When the ecosystem catches up, only these two -G switches change.
-          cmake -S openeb -B build/openeb -G "Visual Studio 17 2022" -A x64 `
+          cmake -S openeb -B build/openeb -G "$env:GENERATOR" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE=openeb/cmake/toolchains/vcpkg.cmake `
             -DVCPKG_DIRECTORY="$env:GITHUB_WORKSPACE/vcpkg" `
             -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
@@ -107,7 +120,7 @@ jobs:
 
       - name: Configure EBplus
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+          cmake -S . -B build -G "$env:GENERATOR" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
             -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
