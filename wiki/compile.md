@@ -1,6 +1,8 @@
 # OpenEB Build Guide
 
 > This guide has two parts: **Part 1** builds the OpenEB SDK (the `openeb/` subtree), **Part 2** builds the GUI application (`gui/` + `algo/`). The OpenEB SDK is the GUI's underlying dependency and must be built first.
+>
+> Platform guides: [Linux (Ubuntu 26.04)](compile.md) · [Windows 11](compile-windows.md) · [macOS (Apple Silicon)](compile-macos.md)
 
 ## Environment
 

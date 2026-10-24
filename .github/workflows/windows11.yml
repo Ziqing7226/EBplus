@@ -96,7 +96,7 @@ jobs:
           cmake -S . -B build -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/opencv/build" `
+            -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
             -DCMAKE_PREFIX_PATH="$env:GITHUB_WORKSPACE/build/openeb-install"
 
       - name: Build EBplus

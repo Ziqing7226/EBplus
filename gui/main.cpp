@@ -14,10 +14,6 @@
 #include <mach-o/dyld.h>
 #endif
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #include "main_window.h"
 
 namespace {
@@ -47,7 +43,7 @@ std::string path_list(const std::vector<std::filesystem::path> &paths) {
 void set_env_if_unset(const char *name, const std::string &value) {
     if (!std::getenv(name) && !value.empty()) {
 #ifdef _WIN32
-        ::SetEnvironmentVariableA(name, value.c_str());
+        ::_putenv_s(name, value.c_str());
 #else
         ::setenv(name, value.c_str(), 0);
 #endif

@@ -136,9 +136,9 @@ std::vector<DeviceDescriptor> find_dvx_devices() {
     if (libusb_init(&ctx) != LIBUSB_SUCCESS) return found;
 
     libusb_device** list = nullptr;
-    const ssize_t count = libusb_get_device_list(ctx, &list);
+    const libusb_ssize_t count = libusb_get_device_list(ctx, &list);
     if (count >= 0) {
-        for (ssize_t i = 0; i < count; ++i) {
+        for (libusb_ssize_t i = 0; i < count; ++i) {
             libusb_device_descriptor desc{};
             if (libusb_get_device_descriptor(list[i], &desc) != LIBUSB_SUCCESS) continue;
             if (desc.idVendor != VID_INIVATION || desc.idProduct != PID_DVXPLORER) continue;
@@ -186,13 +186,13 @@ DvxplorerDevice::DvxplorerDevice(const DeviceDescriptor& descriptor)
     context_ = ctx;
 
     libusb_device** list = nullptr;
-    const ssize_t count = libusb_get_device_list(context_, &list);
+    const libusb_ssize_t count = libusb_get_device_list(context_, &list);
     if (count < 0) {
         libusb_exit(context_);
         context_ = nullptr;
         throw std::runtime_error("DVXplorer: failed to list USB devices.");
     }
-    for (ssize_t i = 0; i < count && handle_ == nullptr; ++i) {
+    for (libusb_ssize_t i = 0; i < count && handle_ == nullptr; ++i) {
         libusb_device_descriptor desc{};
         if (libusb_get_device_descriptor(list[i], &desc) != LIBUSB_SUCCESS) continue;
         if (desc.idVendor != descriptor.vid || desc.idProduct != descriptor.pid) continue;
