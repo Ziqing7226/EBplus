@@ -202,6 +202,7 @@ DetectionResult IntrinsicCalibration::detect_only(const cv::Mat& frame, bool ann
                     corners.clear();
                 };
                 for (const int k : {3, 5}) {
+                    if (found) break;  // an earlier variant already rescued
                     try_bridge(bridge_corners(gray, k));
                     if (found) break;
                 }
@@ -209,11 +210,13 @@ DetectionResult IntrinsicCalibration::detect_only(const cv::Mat& frame, bool ann
                 // removal; on older OpenCV dilate already rescued the frame,
                 // so this pass is never reached and behavior is unchanged.
                 for (const int k : {3, 5}) {
+                    if (found) break;  // an earlier variant already rescued
                     try_bridge(bridge_corners_median(gray, k));
                     if (found) break;
                 }
 #if CV_MAJOR_VERSION >= 5
                 for (const int k : {3, 5}) {
+                    if (found) break;  // an earlier variant already rescued
                     try_bridge(bridge_corners_close(gray, k));
                     if (found) break;
                 }
