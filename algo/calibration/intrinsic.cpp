@@ -69,6 +69,34 @@ cv::Mat bridge_corners(const cv::Mat& gray, int k) {
     cv::bitwise_not(black, out);
     return out;
 }
+
+// The chessboard detector was reworked between OpenCV releases: on 4.13+ and
+// 5.x the dilate-only fallback no longer rescues salt-and-pepper-damaged
+// binary frames (the raw pass still fails on them, see
+// DilationFallbackRescuesErodedCorners), while on <= 4.12 dilate works and a
+// median pass was never reached. The fallback therefore keeps dilate first
+// (older OpenCV behavior is bit-identical) and adds a median variant — the
+// canonical salt-and-pepper remover — for the newer detectors, plus a
+// morphological close (fills the speckle holes in the board regions without
+// fattening them) under OpenCV 5 only.
+cv::Mat bridge_corners_median(const cv::Mat& gray, int k) {
+    cv::Mat black, filtered, out;
+    cv::threshold(gray, black, 128, 255, cv::THRESH_BINARY_INV);
+    cv::medianBlur(black, filtered, k);
+    cv::bitwise_not(filtered, out);
+    return out;
+}
+
+#if CV_MAJOR_VERSION >= 5
+cv::Mat bridge_corners_close(const cv::Mat& gray, int k) {
+    cv::Mat black, closed, out;
+    cv::threshold(gray, black, 128, 255, cv::THRESH_BINARY_INV);
+    cv::morphologyEx(black, closed, cv::MORPH_CLOSE,
+                     cv::getStructuringElement(cv::MORPH_RECT, {k, k}));
+    cv::bitwise_not(closed, out);
+    return out;
+}
+#endif
 } // namespace
 
 IntrinsicCalibration::IntrinsicCalibration() = default;
@@ -162,18 +190,34 @@ DetectionResult IntrinsicCalibration::detect_only(const cv::Mat& frame, bool ann
                 // retry with growing kernels; rescued views still go through
                 // the straightness gate, and the solver's outlier rejection
                 // drops any that disagree with the majority.
-                for (const int k : {3, 5}) {
-                    const cv::Mat bridged = bridge_corners(gray, k);
+                const auto try_bridge = [&](const cv::Mat& bridged) {
                     if (cv::findChessboardCorners(bridged, board_size_, corners,
                                                   cv::CALIB_CB_FILTER_QUADS) &&
                         points_on_grid_radial(corners, board_size_.width,
                                               board_size_.height,
                                               static_cast<float>(std::cos(3.14159 / 9)))) {
                         found = true;
-                        break;
+                        return;
                     }
                     corners.clear();
+                };
+                for (const int k : {3, 5}) {
+                    try_bridge(bridge_corners(gray, k));
+                    if (found) break;
                 }
+                // Newer detectors (OpenCV 4.13+/5.x) need real speckle
+                // removal; on older OpenCV dilate already rescued the frame,
+                // so this pass is never reached and behavior is unchanged.
+                for (const int k : {3, 5}) {
+                    try_bridge(bridge_corners_median(gray, k));
+                    if (found) break;
+                }
+#if CV_MAJOR_VERSION >= 5
+                for (const int k : {3, 5}) {
+                    try_bridge(bridge_corners_close(gray, k));
+                    if (found) break;
+                }
+#endif
             }
             break;
         case CalibrationPattern::CircleGrid:
