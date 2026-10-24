@@ -17,7 +17,7 @@
 #include <vector>
 
 #include <opencv2/core.hpp>
-#include <opencv2/calib3d.hpp>
+#include "algo/common/opencv5_compat.h"
 #include <opencv2/imgproc.hpp>
 
 #include "algo/calibration/intrinsic.h"

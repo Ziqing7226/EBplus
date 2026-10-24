@@ -106,7 +106,7 @@ jobs:
       - name: Build vendored OpenEB (SDK + HAL plugins)
         run: |
           cmake -S openeb -B build/openeb -G "$env:GENERATOR" -A x64 `
-            -DCMAKE_TOOLCHAIN_FILE=openeb/cmake/toolchains/vcpkg.cmake `
+            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/openeb/cmake/toolchains/vcpkg.cmake" `
             -DVCPKG_DIRECTORY="$env:GITHUB_WORKSPACE/vcpkg" `
             -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
             -DCMAKE_BUILD_TYPE=Release `

@@ -325,6 +325,7 @@ target_compile_options(calib_capture_probe PRIVATE ${ALGO_TEST_COMPILE_OPTIONS})
 add_executable(analyze_calib_png
     analyze_calib_png.cpp
 )
+target_include_directories(analyze_calib_png PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(analyze_calib_png PRIVATE
     ${OpenCV_LIBS}
 )

@@ -86,6 +86,7 @@ jobs:
       - name: Run unit tests
         run: |
           export MV_HAL_PLUGIN_PATH="$GITHUB_WORKSPACE/build/openeb-install/lib/metavision/hal/plugins"
+          export LD_LIBRARY_PATH="$GITHUB_WORKSPACE/build/openeb-install/lib:$GITHUB_WORKSPACE/build/openeb-install/lib/metavision/hal/plugins:$LD_LIBRARY_PATH"
           ctest --test-dir build --output-on-failure
 
       - name: Upload EBplus binary

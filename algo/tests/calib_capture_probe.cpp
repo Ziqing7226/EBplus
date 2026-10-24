@@ -26,20 +26,9 @@
 #include <vector>
 
 #include <opencv2/core.hpp>
-// OpenCV 5.0 split calib3d: findChessboardCorners/CALIB_CB_* live in
-// objdetect, undistortPoints in geometry; the 2D geometry helpers
-// (boundingRect etc.) left imgproc for geometry/2d.hpp. Include per major version
-// (CV_MAJOR_VERSION comes from the core.hpp include above).
-#if CV_MAJOR_VERSION >= 5
-#include <opencv2/objdetect.hpp>
-#include <opencv2/calib.hpp>
-#include <opencv2/geometry.hpp>
-#include <opencv2/geometry/2d.hpp>   // boundingRect etc. left imgproc in 5.0
-#else
-#include <opencv2/calib3d.hpp>
-#endif
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
+// OpenCV 5.0 split calib3d and imgproc — see opencv5_compat.h.
+#include "algo/common/opencv5_compat.h"
 
 #include <metavision/sdk/base/events/event_cd.h>
 #include <metavision/sdk/base/utils/timestamp.h>
@@ -161,15 +150,14 @@ int main(int argc, char** argv) {
         cv::Mat bf_bin;
         cv::threshold(bf.frame, bf_bin, 128, 255, cv::THRESH_BINARY_INV);
         const int n_black = cv::countNonZero(bf_bin);
-        double bfrac = 0.0, bb_area = 0.0;
+        double bfrac = 0.0;
         std::vector<std::vector<cv::Point>> bcontours;
         cv::findContours(bf_bin, bcontours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         if (!bcontours.empty()) {
             std::sort(bcontours.begin(), bcontours.end(),
                       [](const auto& a, const auto& b) { return cv::contourArea(a) > cv::contourArea(b); });
             const auto& big = bcontours[0];
-            cv::Rect bb = cv::boundingRect(big);
-            bb_area = static_cast<double>(bb.width) * bb.height;
+            const cv::Rect bb = cv::boundingRect(big);
             bfrac = static_cast<double>(n_black) / (W * H);
             std::fprintf(stderr, "[probe]   board=%d (%.1f%%)  largest comp bbox=%dx%d+%d+%d  "
                          "valid=%d\n",

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(GUI_for_openEB LANGUAGES CXX VERSION 3.0.5)
+project(GUI_for_openEB LANGUAGES CXX VERSION 3.0.6)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -71,21 +71,14 @@ enable_testing()
 set(EBPLUS_GTEST_DISCOVERY_TIMEOUT 60 CACHE STRING
     "Seconds allowed for GTest test-case discovery")
 function(ebplus_gtest_discover_tests target)
-    # On Windows the test executables need their DLL graph (Qt, OpenEB,
-    # vcpkg ports) present in PATH; POST_BUILD discovery would run them
-    # too early, so defer discovery to the first ctest run instead.
-    if(WIN32)
-        gtest_discover_tests(${target}
-            DISCOVERY_TIMEOUT ${EBPLUS_GTEST_DISCOVERY_TIMEOUT}
-            DISCOVERY_MODE PRE_TEST
-            ${ARGN}
-        )
-    else()
-        gtest_discover_tests(${target}
-            DISCOVERY_TIMEOUT ${EBPLUS_GTEST_DISCOVERY_TIMEOUT}
-            ${ARGN}
-        )
-    endif()
+    # Discovery runs the test binaries; their OpenEB/Qt runtime graph is not
+    # locatable from the build tree before the environment is set up (Windows
+    # PATH, Linux LD_LIBRARY_PATH), so defer discovery to the first ctest run.
+    gtest_discover_tests(${target}
+        DISCOVERY_TIMEOUT ${EBPLUS_GTEST_DISCOVERY_TIMEOUT}
+        DISCOVERY_MODE PRE_TEST
+        ${ARGN}
+    )
 endfunction()
 
 add_subdirectory(algo)

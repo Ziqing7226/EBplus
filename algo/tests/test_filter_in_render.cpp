@@ -6,13 +6,7 @@
 #include <cmath>
 #include <filesystem>
 #include <opencv2/imgproc.hpp>
-// OpenCV 5 moved undistortPoints from calib3d to the geometry module; the
-// calib3d.hpp shim in some 5.x packagings does not pull it in.
-#if CV_MAJOR_VERSION >= 5
-#include <opencv2/geometry.hpp>
-#else
-#include <opencv2/calib3d.hpp>
-#endif
+#include "algo/common/opencv5_compat.h"
 
 #include <metavision/sdk/base/events/event_cd.h>
 

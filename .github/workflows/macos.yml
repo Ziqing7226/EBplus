@@ -99,6 +99,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/build/openeb-install;$(brew --prefix)"
           cmake --build build/macos-tests --parallel
           export MV_HAL_PLUGIN_PATH="$GITHUB_WORKSPACE/build/openeb-install/lib/metavision/hal/plugins"
+          export DYLD_FALLBACK_LIBRARY_PATH="$GITHUB_WORKSPACE/build/openeb-install/lib:$DYLD_FALLBACK_LIBRARY_PATH"
           ctest --test-dir build/macos-tests --output-on-failure
 
   package-dmg:
