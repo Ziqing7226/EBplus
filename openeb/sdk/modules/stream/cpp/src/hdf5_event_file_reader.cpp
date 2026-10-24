@@ -14,6 +14,15 @@
 #include <sstream>
 #ifdef HAS_HDF5
 #include <H5Cpp.h>
+// HDF5 >= 1.14 splits the direct-chunk reader into H5Dread_chunk1/2 and, on
+// 2.x defaults, maps the plain H5Dread_chunk name to H5Dread_chunk2, whose
+// signature takes an extra buffer-size argument. Pin the historical
+// five-argument variant explicitly; on < 1.14 only H5Dread_chunk exists.
+#if H5_VERSION_GE(1, 14, 0)
+#define MV_H5_READ_CHUNK H5Dread_chunk1
+#else
+#define MV_H5_READ_CHUNK H5Dread_chunk
+#endif
 #include <hdf5_ecf/ecf_codec.h>
 #endif
 #include "metavision/sdk/stream/hdf5_event_file_reader.h"
@@ -155,7 +164,7 @@ private:
         H5Dget_chunk_storage_size(dset_.getId(), offset, &compressed_size);
         if (decoding_cb_) {
             inbuf_.resize(compressed_size);
-            if (H5Dread_chunk(dset_.getId(), H5P_DEFAULT, offset, &filters, inbuf_.data()) < 0) {
+            if (MV_H5_READ_CHUNK(dset_.getId(), H5P_DEFAULT, offset, &filters, inbuf_.data()) < 0) {
                 return false;
             }
             // Make sure we have enough space to decode events, we will resize to correct size after decoding
@@ -164,7 +173,7 @@ private:
             events_.resize(std::min(num_bytes / sizeof(Metavision::EventCD), num_events_ - offset_));
         } else {
             events_.resize(std::min(chunk_size_, num_events_ - offset_));
-            if (H5Dread_chunk(dset_.getId(), H5P_DEFAULT, offset, &filters, events_.data()) < 0) {
+            if (MV_H5_READ_CHUNK(dset_.getId(), H5P_DEFAULT, offset, &filters, events_.data()) < 0) {
                 return false;
             }
         }
@@ -284,7 +293,7 @@ private:
         }
         hsize_t offset[1] = {offset_};
         std::uint32_t filters;
-        if (H5Dread_chunk(dset_.getId(), H5P_DEFAULT, offset, &filters, indexes_.data()) < 0) {
+        if (MV_H5_READ_CHUNK(dset_.getId(), H5P_DEFAULT, offset, &filters, indexes_.data()) < 0) {
             return false;
         }
         const size_t num_indexes = std::min(num_indexes_ - offset_, chunk_size_);

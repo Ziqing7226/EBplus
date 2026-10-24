@@ -76,6 +76,8 @@ jobs:
           & "$env:GITHUB_WORKSPACE\vcpkg\vcpkg.exe" install
           --triplet x64-windows
           dirent boost-program-options boost-timer boost-chrono boost-thread
+          boost-property-tree boost-math boost-assign boost-algorithm
+          boost-preprocessor
           libusb protobuf "hdf5[cpp,threadsafe,zlib]" gtest
 
       - name: Build vendored OpenEB (SDK + HAL plugins)
@@ -83,11 +85,13 @@ jobs:
           cmake -S openeb -B build/openeb -A x64 `
             -DCMAKE_TOOLCHAIN_FILE=openeb/cmake/toolchains/vcpkg.cmake `
             -DVCPKG_DIRECTORY="$env:GITHUB_WORKSPACE/vcpkg" `
+            -DOpenCV_DIR="$env:GITHUB_WORKSPACE/deps/opencv/build" `
             -DCMAKE_BUILD_TYPE=Release `
             -DBUILD_TESTING=OFF `
             -DBUILD_SAMPLES=OFF `
             -DBUILD_APPS=OFF `
             -DCOMPILE_PYTHON3_BINDINGS=OFF `
+            "-DMETAVISION_SELECTED_MODULES=base;core;stream" `
             -DCMAKE_INSTALL_PREFIX="$env:GITHUB_WORKSPACE/build/openeb-install"
           cmake --build build/openeb --config Release --target install --parallel
 
@@ -103,7 +107,10 @@ jobs:
         run: cmake --build build --config Release --parallel
 
       - name: Run unit tests
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: |
+          $env:PATH = "$env:GITHUB_WORKSPACE/build/openeb-install/bin;$env:GITHUB_WORKSPACE/deps/opencv/build/x64/vc16/bin;$env:GITHUB_WORKSPACE/vcpkg/installed/x64-windows/bin;$env:PATH"
+          $env:MV_HAL_PLUGIN_PATH = "$env:GITHUB_WORKSPACE/build/openeb-install/lib/metavision/hal/plugins"
+          ctest --test-dir build -C Release --output-on-failure
 
       - name: Upload EBplus binary
         if: github.event_name == 'pull_request'

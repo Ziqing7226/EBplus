@@ -561,7 +561,8 @@ void Aedat4FileSource::run(EventSink sink, DoneFn done) {
         file.seekg(first_packet_offset_);
         for (;;) {
             if (stop_.load(std::memory_order_relaxed)) break;
-            if (file.tellg() + 8 > stream_end) break; // packet area done
+            // std::fpos + int is ambiguous on MSVC — compare in streamoff.
+            if (static_cast<std::streamoff>(file.tellg()) + 8 > stream_end) break; // packet area done
             std::uint8_t header[8];
             if (!read_exact(file, header, 8)) break; // clean EOF
             const std::int32_t sid =

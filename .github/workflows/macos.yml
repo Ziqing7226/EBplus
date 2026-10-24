@@ -91,6 +91,7 @@ jobs:
             -DGUI_BUILD_TESTS=ON \
             -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/build/openeb-install;$(brew --prefix)"
           cmake --build build/macos-tests --parallel
+          export MV_HAL_PLUGIN_PATH="$GITHUB_WORKSPACE/build/openeb-install/lib/metavision/hal/plugins"
           ctest --test-dir build/macos-tests --output-on-failure
 
   package-dmg:

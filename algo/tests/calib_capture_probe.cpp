@@ -25,8 +25,17 @@
 #include <thread>
 #include <vector>
 
-#include <opencv2/calib3d.hpp>   // findChessboardCorners + CALIB_CB_* (OpenCV 5.0)
 #include <opencv2/core.hpp>
+// OpenCV 5.0 split calib3d: findChessboardCorners/CALIB_CB_* live in
+// objdetect, undistortPoints in geometry. Include per major version
+// (CV_MAJOR_VERSION comes from the core.hpp include above).
+#if CV_MAJOR_VERSION >= 5
+#include <opencv2/objdetect.hpp>
+#include <opencv2/calib.hpp>
+#include <opencv2/geometry.hpp>
+#else
+#include <opencv2/calib3d.hpp>
+#endif
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 

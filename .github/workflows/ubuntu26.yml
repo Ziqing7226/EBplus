@@ -72,7 +72,9 @@ jobs:
         run: cmake --build build --parallel
 
       - name: Run unit tests
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          export MV_HAL_PLUGIN_PATH="$GITHUB_WORKSPACE/build/openeb-install/lib/metavision/hal/plugins"
+          ctest --test-dir build --output-on-failure
 
       - name: Upload EBplus binary
         if: github.event_name == 'pull_request'

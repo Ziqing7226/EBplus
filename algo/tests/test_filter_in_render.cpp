@@ -4,8 +4,15 @@
 #include <QCoreApplication>
 #include <cstdio>
 #include <cmath>
+#include <filesystem>
 #include <opencv2/imgproc.hpp>
+// OpenCV 5 moved undistortPoints from calib3d to the geometry module; the
+// calib3d.hpp shim in some 5.x packagings does not pull it in.
+#if CV_MAJOR_VERSION >= 5
+#include <opencv2/geometry.hpp>
+#else
 #include <opencv2/calib3d.hpp>
+#endif
 
 #include <metavision/sdk/base/events/event_cd.h>
 
@@ -159,7 +166,9 @@ int main(int argc, char** argv) {
     // With a distortion calibration loaded, an event must be RENDERED at the
     // undistorted coordinate (matching cv::undistortPoints ground truth).
     {
-        const std::string yml = "/tmp/gui_test_calib.yml";
+        // POSIX-only "/tmp" breaks cv::FileStorage on Windows.
+        const std::string yml =
+            (std::filesystem::temp_directory_path() / "gui_test_calib.yml").string();
         cv::FileStorage fs(yml, cv::FileStorage::WRITE);
         fs << "image_width" << W << "image_height" << H;
         cv::Mat K = (cv::Mat_<double>(3, 3) << 80, 0, 50, 0, 80, 50, 0, 0, 1);

@@ -71,8 +71,14 @@ SyntheticViews make_views(std::size_t n_views,
             p.y += static_cast<float>(noise(rng));
         }
         // Corrupt the view if requested (large coherent offset → huge RMS).
+        // The offset direction varies per view: a uniform shift is a
+        // degenerate case the solver can absorb into the principal point
+        // (LM basin choice differs per platform), which would make the
+        // rejection outcome platform-dependent.
         if (i < corrupt.size() && corrupt[i]) {
-            for (auto& p : pts) { p.x += 200.0f; p.y -= 200.0f; }
+            const float dx = 200.0f * ((i % 2) ? 1.0f : -1.0f);
+            const float dy = 200.0f * ((i % 3) ? 1.0f : -1.0f);
+            for (auto& p : pts) { p.x += dx; p.y += dy; }
         }
         sv.image_points.push_back(std::move(pts));
     }
