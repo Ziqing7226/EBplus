@@ -35,6 +35,9 @@ constexpr size_t USB_TIME_OUT                = 100;
 constexpr size_t N_ASYNC_TRANFERS_PER_DEVICE = 20;
 constexpr size_t PACKET_SIZE                 = 128 * 1024;
 constexpr uint32_t BULK_NAK_REPORT_THRESHOLD = 100;
+// Consecutive non-timeout bulk transfer errors tolerated (with requeue)
+// before the stream is torn down. See run_transfers().
+constexpr uint32_t kMaxBulkErrorRetries = 3;
 
 size_t get_envar_or_default(const std::string &envvar, size_t default_val) {
     size_t val = default_val;
@@ -216,6 +219,7 @@ void PseeLibUSBDataTransfer::run_transfers(const DataTransfer &data_producer) {
         }
         case LIBUSB_TRANSFER_COMPLETED: {
             timeout_cnt_ = 0;
+            error_retry_cnt_ = 0;
             // Note: unlike raw libusb, partial transfers are reported as completed
             // Pass the data and get a new buffer
             data_producer.transfer_data(transfer.get_buf());
@@ -228,8 +232,23 @@ void PseeLibUSBDataTransfer::run_transfers(const DataTransfer &data_producer) {
             transfer.submit();
             break;
         }
-        default:
-            throw HalConnectionException(transfer.status(), libusb_error_category());
+        default: {
+            // CANCELLED must keep propagating: stop_impl() relies on cancelled
+            // transfers not being re-queued. NO_DEVICE means the device is
+            // genuinely gone. Other errors get a bounded number of requeues:
+            // a single transient bus glitch used to tear down the whole
+            // stream.
+            if (transfer.status() == LIBUSB_TRANSFER_CANCELLED ||
+                transfer.status() == LIBUSB_TRANSFER_NO_DEVICE ||
+                error_retry_cnt_ >= kMaxBulkErrorRetries) {
+                throw HalConnectionException(transfer.status(), libusb_error_category());
+            }
+            ++error_retry_cnt_;
+            MV_HAL_LOG_WARNING() << "Bulk transfer error " << transfer.status() << ", requeueing ("
+                                 << error_retry_cnt_ << "/" << kMaxBulkErrorRetries << ")";
+            transfer.submit();
+            break;
+        }
         }
     }
 }
