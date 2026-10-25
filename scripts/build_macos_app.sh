@@ -464,11 +464,18 @@ OPENEB_PREFIX_PATH="$(cmake_prefix_path \
     "$ABSEIL_PREFIX")"
 
 log "Configuring vendored OpenEB"
-cmake -S "$REPO_ROOT/openeb" -B "$OPENEB_BUILD_DIR" \
+# -Wno-inconsistent-missing-override: the vendored OpenEB's own plugin
+# headers (tz_psee_video.h, genx320_roi_interface.h, ...) are not marked
+# 'override'; upstream sources are not patched here, the warning is only
+# suppressed for this vendored build. -Wno-deprecated hides the CMP0095 OLD
+# pin notice and CMP0167=NEW the boost policy notice.
+cmake --Wno-deprecated -S "$REPO_ROOT/openeb" -B "$OPENEB_BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
     -DCMAKE_INSTALL_PREFIX="$OPENEB_INSTALL_PREFIX" \
     -DTARGET_PLATFORM=macos \
+    -DCMAKE_CXX_FLAGS=-Wno-inconsistent-missing-override \
+    -DCMAKE_POLICY_DEFAULT_CMP0167=NEW \
     -DBUILD_TESTING=OFF \
     -DBUILD_SAMPLES=OFF \
     -DBUILD_APPS=OFF \

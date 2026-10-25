@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.16)
 
 project(GUI_for_openEB LANGUAGES CXX VERSION 3.1.0)
 
+# MetavisionSDK's installed config files call find_package(Boost) without a
+# policy scope; on CMake >= 3.30 that emits a CMP0167 warning on every
+# configure. NEW is what every supported toolchain already resolves to
+# (vcpkg, Homebrew and Debian all ship BoostConfig.cmake), so setting it
+# only removes the warning.
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
