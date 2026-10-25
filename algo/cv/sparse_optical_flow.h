@@ -513,18 +513,25 @@ private:
         const int block_area = (2 * half + 1) * (2 * half + 1);
         const int min_valid =
             static_cast<int>(valid_pix_occupancy_ * static_cast<double>(block_area));
+        // Whole-block bounds are decided before touching any pixel: the cur
+        // block bounds do not depend on the candidate offset, and the prev
+        // block is the cur block translated by (off_x, off_y) - so the
+        // per-pixel OOB checks in the loop reduce to these two block tests
+        // (same condition set, one test instead of block_area * 4).
+        if (bx - half < 0 || bx + half >= cur.cols || by - half < 0 || by + half >= cur.rows ||
+            bx + off_x - half < 0 || bx + off_x + half >= prev.cols ||
+            by + off_y - half < 0 || by + off_y + half >= prev.rows)
+            return std::numeric_limits<double>::max();
         double sum_dist = 0.0;
         int valid_cur = 0, valid_prev = 0;
+        // Row pointers instead of per-pixel at<> (same traversal order and
+        // values, so the floating-point sum is bit-identical).
         for (int dy = -half; dy <= half; ++dy) {
+            const float* cur_row = cur.ptr<float>(by + dy) + bx;
+            const float* prev_row = prev.ptr<float>(by + dy + off_y) + bx + off_x;
             for (int dx = -half; dx <= half; ++dx) {
-                const int cxp = bx + dx, cyp = by + dy;
-                const int pxp = cxp + off_x, pyp = cyp + off_y;
-                if (cxp < 0 || cxp >= cur.cols || cyp < 0 || cyp >= cur.rows)
-                    return std::numeric_limits<double>::max();
-                if (pxp < 0 || pxp >= prev.cols || pyp < 0 || pyp >= prev.rows)
-                    return std::numeric_limits<double>::max();
-                const double cv = static_cast<double>(cur.at<float>(cyp, cxp));
-                const double pv = static_cast<double>(prev.at<float>(pyp, pxp));
+                const double cv = static_cast<double>(cur_row[dx]);
+                const double pv = static_cast<double>(prev_row[dx]);
                 sum_dist += std::fabs(cv - pv);
                 if (cv > 0.0) ++valid_cur;
                 if (pv > 0.0) ++valid_prev;

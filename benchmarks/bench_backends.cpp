@@ -115,16 +115,21 @@ constexpr int W = 1280, H = 720;
 
 // One backend scenario: 100 pushes of 30k events (a 33ms window at ~1M ev/s),
 // pull_result after every push (the GUI pulls per display frame).
-void scenario(const char* name, const char* mode, Golden& golden) {
-    auto backend = gui::create_algo_backend(name, W, H);
+void scenario(const char* name, const char* mode, Golden& golden,
+              const char* set_key = nullptr, const char* set_val = nullptr,
+              const char* backend_name = nullptr) {
+    auto backend = gui::create_algo_backend(backend_name ? backend_name : name, W, H);
     if (!backend) {
         std::fprintf(stderr, "bench_backends: unknown backend '%s'\n", name);
         return;
     }
+    if (set_key) backend->set_param(set_key, set_val);
     std::mt19937 rng(99 + name[0]);
     std::vector<double> t_push, t_pull;
     std::uint64_t frame_h = 0;
+    std::uint64_t arrows_h = 0;
     std::string status;
+    std::string last_status;
     constexpr int kBatch = 30000;
     constexpr int kBatches = 100;
     for (int i = 0; i < kBatches; ++i) {
@@ -137,18 +142,23 @@ void scenario(const char* name, const char* mode, Golden& golden) {
         t_push.push_back(std::chrono::duration<double, std::micro>(b - a).count());
         t_pull.push_back(std::chrono::duration<double, std::micro>(c - b).count());
         frame_h = hash_mat(r.frame);
+        arrows_h = fnv1a(r.flow_arrows.data(),
+                         r.flow_arrows.size() * sizeof(gui::OverlayFlowArrow));
+        last_status = r.status;
         const auto span = backend->output_span();
         status = r.status;
         (void)span;
     }
     const auto span = backend->output_span();
     golden.add(std::string(name) + "/frame", frame_h);
+    golden.add(std::string(name) + "/arrows", arrows_h);
     golden.add(std::string(name) + "/status",
                fnv1a(status.data(), status.size()));
     golden.add(std::string(name) + "/span",
                hash_events(span.first, span.first + span.second));
-    std::printf("%-18s push %8.1f us/batch | pull %8.1f us/pull (30k ev)\n",
+    std::printf("%-24s push %8.1f us/batch | pull %8.1f us/pull (30k ev)\n",
                 name, median_us(t_push), median_us(t_pull));
+    (void)last_status;
     (void)mode;
 }
 
@@ -170,6 +180,10 @@ int main(int argc, char** argv) {
     scenario("freq_detector", mode.c_str(), golden);
     scenario("background_mask", mode.c_str(), golden);
     scenario("sensor_self_test", mode.c_str(), golden);
+    scenario("sparse_optical_flow", mode.c_str(), golden);
+    scenario("sparse_optical_flow_lk", mode.c_str(), golden, "mode", "1", "sparse_optical_flow");
+    scenario("sparse_optical_flow_bm", mode.c_str(), golden, "mode", "2", "sparse_optical_flow");
+    scenario("event_to_video", mode.c_str(), golden);
 
     if (mode == "save" || mode == "check") {
         if (!golden.run(mode)) return 1;
