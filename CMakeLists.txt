@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(GUI_for_openEB LANGUAGES CXX VERSION 3.1.0)
+project(GUI_for_openEB LANGUAGES CXX VERSION 3.1.1)
 
 # MetavisionSDK's installed config files call find_package(Boost) without a
 # policy scope; on CMake >= 3.30 that emits a CMP0167 warning on every
