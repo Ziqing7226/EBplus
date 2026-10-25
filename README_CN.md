@@ -36,7 +36,7 @@
 | 厂商 | 型号 | 实时支持 |
 |------|------|----------|
 | Prophesee | 已安装的 Metavision HAL 插件所暴露的任意相机 | 完整 —— 事件流、偏置、ROI、抗闪烁 / 轨迹滤波 / ERC、触发、RAW 录制 |
-| CenturyArks | SilkyEvCam,经其兼容 Metavision 的 HAL 插件 | 与 Prophesee 同栈 |
+| CenturyArks | SilkyEvCam——原生支持:由内嵌 OpenEB 构建的 HAL 插件在注册 Prophesee USB ID 的同时注册了 CenturyArks 的(无需单独的厂商插件) | 与 Prophesee 同栈 |
 | iniVation | DAVIS346、DVXplorer——已真机验证;DAVIS240A/B/C、DAVIS640、CDAVIS——按参考实现移植,尚未真机验证 | 初步 —— 事件流、含 Auto Bias 的完整偏置控制、硬件 ROI(DAVIS)、IMU 姿态视图、APS 帧预览、AEDAT4 录制 |
 
 文件回放无需相机:RAW 文件,以及 AEDAT4、ALPDATA 录制中的事件流。
@@ -68,18 +68,19 @@ cmake --build build -- -j$(nproc)
 ```bash
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib"
 export HDF5_PLUGIN_PATH="/usr/local/lib/hdf5/plugin"
-export MV_HAL_PLUGIN_PATH=/usr/local/lib/metavision/hal/plugins  # Prophesee
-# export MV_HAL_PLUGIN_PATH=/usr/lib/CenturyArks/hal/plugins     # CenturyArks
+# 由内嵌 OpenEB 构建的插件同时注册 Prophesee 与 CenturyArks(SilkyEvCam)
+# 的 USB ID - 一个路径即可覆盖两家,无需单独的厂商插件:
+export MV_HAL_PLUGIN_PATH=/usr/local/lib/metavision/hal/plugins
 export QT_QPA_PLATFORM=xcb       # Wayland 对 QOpenGLWidget 渲染黑屏
 export QSG_RHI_BACKEND=opengl    # Qt 6 可能默认使用 Vulkan
 
 ./build/gui/gui_for_openeb
 ```
 
-| 厂商 | HAL 插件路径 |
-|------|-------------|
-| Prophesee | `/usr/local/lib/metavision/hal/plugins` |
-| CenturyArks | `/usr/lib/CenturyArks/hal/plugins` |
+/usr/local/lib/metavision/hal/plugins 处的插件(由内嵌 OpenEB 构建)
+同时注册 Prophesee 与 CenturyArks 的 USB ID,一个路径覆盖两家;
+仅当你刻意安装了厂商独立分发的插件时才需要指向别处。
+
 
 </details>
 

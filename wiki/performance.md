@@ -61,3 +61,49 @@ bench_frame_conv           # Mat->QImage A/B with equality assert
 - **Upstream-intentional OpenEB behaviour** (real-time playback default,
   1024-event decode granularity, EVT2/EVT3 forwarder batching) is left as
   upstream designed it.
+
+## 3.2.0 second wave — OpenEB-side work (all file-testable, no camera needed)
+
+### Correctness fixes in the vendored OpenEB
+- HDF5 index reader: heap out-of-bounds write when seeking back after a
+  partial chunk (the read buffer is now sized before `H5Dread_chunk`).
+- v4l2 `get_sensor_info`: control reaching the end of a non-void function
+  (UB) — `raise_error` is now `[[noreturn]]`, matching its always-throws
+  body.
+- camera_serialization: the `[[nodiscard]]` protobuf serialization status
+  is checked; register_map / EVT3 decoder signed–unsigned comparisons;
+  misc. dead-code cleanups.
+- USB bulk transfers: a transient error (STALL, ERROR, ...) no longer tears
+  down the whole acquisition — bounded requeue (3 consecutive, reset by any
+  completed transfer). CANCELLED / NO_DEVICE still fail fast. **Pending
+  live-camera validation.**
+
+### Dual-camera support in one plugin
+The stock Prophesee HAL plugin now registers the CenturyArks (SilkyEvCam)
+USB IDs alongside Prophesee's: both vendors speak the same Treuzell
+protocol on the same device stack, so one plugin — and one
+`MV_HAL_PLUGIN_PATH` — covers both. This also removes the duplicate
+discovery / "Camera is busy" hazard of installing two plugins in one
+directory. **Pending live-camera validation.**
+
+### Performance (bit-exact, golden-verified)
+| Path | Before | After |
+|---|---|---|
+| `get_duration()` on a RAW file | opened a 2nd Camera that rebuilt the whole index (~0.55 s of duplicate CPU+I/O per query on a 200 MB file) | reuses the reader device's own background index |
+| BlockMatch optical-flow SAD (30k-event batch) | 73.0 ms | 30.9 ms (−58%) |
+| Camera / index-thread startup waits | bare spin loops | yield |
+
+Measured and rejected (see `perf-results` records): EVT2 decoder dispatch
+reordering (−5%), batched index building (no measurable gain — the build
+is I/O-bound at ~0.57 s for 200 MB), LucasKanade size snapshots (no gain;
+the deque pruning dominates).
+
+### Warnings: zero, fixed in the sources
+Every compiler warning across the three CI toolchains is fixed in the code
+— including ~90 AppleClang missing-`override` diagnostics in the vendored
+device headers, MSVC C4250 dominance (spelled out with delegating
+overrides), and four first-party AppleClang diagnostics (structured-binding
+lambda captures, a constant-false u16 bounds check, two dead locals). The
+workflows carry **no** compiler warning-suppression flags; only cmake's own
+`-Wno-policy` / `-Wno-deprecated` notices remain (vcpkg boost-wrapper and
+the CMP0095 OLD pin, whose semantics must not change).
