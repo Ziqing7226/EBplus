@@ -10,7 +10,7 @@ Real-time visualization · camera control · recording & playback · calibration
 
 ![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue)
 ![Language](https://img.shields.io/badge/C%2B%2B17-Qt%206-orange)
-![Version](https://img.shields.io/badge/version-3.2.0-blue)
+![Version](https://img.shields.io/badge/version-3.1.3-blue)
 [![Ubuntu 26.04](https://img.shields.io/badge/CI-Ubuntu%2026.04-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/ubuntu26.yml)
 [![Windows 11](https://img.shields.io/badge/CI-Windows%2011-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/windows11.yml)
 [![macOS](https://img.shields.io/badge/CI-macOS-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/macos.yml)
