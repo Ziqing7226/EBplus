@@ -829,7 +829,9 @@ void I_EventsStream::index(std::unique_ptr<Device> device_for_indexing) {
     });
 
     // Wait for the thread to be running
-    while (!index_build_thread_.joinable()) {}
+    while (!index_build_thread_.joinable()) {
+        std::this_thread::yield(); // spin without burning the core
+    }
 }
 
 I_EventsStream::Index I_EventsStream::index_impl(Device &device) {

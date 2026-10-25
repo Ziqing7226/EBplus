@@ -112,7 +112,9 @@ bool Camera::Private::start() {
     // notifies the thread that it can start running
     run_thread_cond_.notify_one();
 
-    while (!camera_is_started_ && is_running_) {}
+    while (!camera_is_started_ && is_running_) {
+        std::this_thread::yield(); // spin without burning the core
+    }
 
     return true;
 }
