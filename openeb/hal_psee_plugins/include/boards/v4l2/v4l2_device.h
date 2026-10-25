@@ -28,7 +28,7 @@
 
 namespace Metavision {
 
-void raise_error(const std::string &str);
+[[noreturn]] void raise_error(const std::string &str);
 
 using V4l2Capability = struct v4l2_capability;
 

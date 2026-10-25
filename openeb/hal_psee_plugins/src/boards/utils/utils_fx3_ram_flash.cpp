@@ -17,6 +17,15 @@
 #include <windows.h>
 #include <cstdio>
 #include <io.h>
+// MSVC deprecates the POSIX spellings; the ISO names are the same CRT
+// entry points. Map them once here instead of using deprecated aliases.
+#ifndef open
+#define open  _open
+#define read  _read
+#define lseek _lseek
+#define close _close
+#define O_RDONLY _O_RDONLY
+#endif
 #endif
 #include <fcntl.h>
 #include <fstream>

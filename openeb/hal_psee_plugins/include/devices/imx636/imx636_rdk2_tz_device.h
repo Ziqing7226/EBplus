@@ -41,6 +41,13 @@ public:
     virtual I_HW_Identification::SensorInfo get_sensor_info();
     long long get_sensor_id();
     virtual int get_illumination();
+    // The multi-base diamond already resolves get_device_info via
+    // TzPseeFpgaDevice dominance - the explicit delegating override only
+    // spells that out (silences MSVC C4250 without changing behavior).
+    void get_device_info(I_HW_Identification::SystemInfo &info, std::string prefix) override {
+        TzPseeFpgaDevice::get_device_info(info, prefix);
+    }
+
     virtual int get_temperature();
 
 protected:

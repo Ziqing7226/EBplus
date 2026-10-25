@@ -34,15 +34,26 @@ public:
 
     virtual std::list<StreamFormat> get_supported_formats() const override;
     StreamFormat get_output_format() const override;
-    virtual long get_system_id() const;
-    virtual bool set_mode_standalone();
-    virtual bool set_mode_master();
-    virtual bool set_mode_slave();
-    virtual I_CameraSynchronization::SyncMode get_mode() const;
+    long get_system_id() const override;
+    bool set_mode_standalone() override;
+    bool set_mode_master() override;
+    bool set_mode_slave() override;
+    I_CameraSynchronization::SyncMode get_mode() const override;
     virtual I_HW_Identification::SensorInfo get_sensor_info() {
         return {3, 1, "Gen3.1"};
     }
     virtual int get_illumination();
+
+    // TzPseeFpgaDevice and TzIssdDevice both derive from TzDevice; the
+    // compiler already resolves these via TzIssdDevice dominance - the
+    // explicit delegating overrides only spell that out (silences C4250).
+    void start() override { TzIssdDevice::start(); }
+    void stop() override { TzIssdDevice::stop(); }
+    void initialize() override { TzIssdDevice::initialize(); }
+    void destroy() override { TzIssdDevice::destroy(); }
+    void get_device_info(I_HW_Identification::SystemInfo &info, std::string prefix) override {
+        TzIssdDevice::get_device_info(info, prefix);
+    }
 
     /// get the type of sensor
     /// 0x90100402h uniform TD feedback PPD VGA
@@ -50,7 +61,7 @@ public:
     long long get_sensor_id();
 
 protected:
-    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config);
+    void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config) override;
 
 private:
     I_CameraSynchronization::SyncMode sync_mode_;

@@ -23,7 +23,7 @@ TzStreamer::TzStreamer(std::shared_ptr<TzLibUSBBoardCommand> cmd, uint32_t dev_i
     // Try to stop any previous activity. Ignore failure, as it is the expected behavior from a stopped device
     try {
         stop();
-    } catch (std::system_error &e) {}
+    } catch (const std::system_error &) {}
 }
 
 std::shared_ptr<TzDevice> TzStreamer::build(std::shared_ptr<TzLibUSBBoardCommand> cmd, uint32_t dev_id,

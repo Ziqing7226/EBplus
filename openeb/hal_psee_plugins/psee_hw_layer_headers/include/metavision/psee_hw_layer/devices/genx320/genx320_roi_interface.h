@@ -44,11 +44,11 @@ public:
     /// @return true on success
     bool set_mode(const Mode &mode);
 
-    I_ROI::Mode get_mode() const;
+    I_ROI::Mode get_mode() const override;
 
     /// @brief Gets the maximum number of windows
     /// @return the maximum number of windows that can be set via @ref set_windows
-    size_t get_max_supported_windows_count() const;
+    size_t get_max_supported_windows_count() const override;
 
     /// @brief Sets multiple ROIs from row and column binary maps
     ///
@@ -60,9 +60,9 @@ public:
     /// enable
     /// @return true if input have the correct dimension and the ROI is set correctly, false otherwise
     /// @warning For a pixel to be enabled, it must be enabled on both its row and column
-    bool set_lines(const std::vector<bool> &cols, const std::vector<bool> &rows);
+    bool set_lines(const std::vector<bool> &cols, const std::vector<bool> &rows) override;
 
-    std::vector<I_ROI::Window> get_windows() const;
+    std::vector<I_ROI::Window> get_windows() const override;
 
     bool get_lines(std::vector<bool> &cols, std::vector<bool> &rows) const override;
 
@@ -72,7 +72,7 @@ private:
     /// @return true on success
     /// @throw an exception if the size of the vector is higher than the maximum supported number
     ///        of windows (see @ref get_max_supported_windows_count)
-    bool set_windows_impl(const std::vector<Window> &windows);
+    bool set_windows_impl(const std::vector<Window> &windows) override;
 
     std::shared_ptr<GenX320RoiDriver> driver_;
     bool enabled_;
