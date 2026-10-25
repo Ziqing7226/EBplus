@@ -98,7 +98,7 @@ line, e.g.
 
 ```bat
 rem runtime DLLs: Qt · vendored OpenEB SDK · OpenCV · vcpkg ports
-set "PATH=D:\deps\Qt.8.3\msvc2022_64in;%CD%uild\openeb-installin;<opencv>dc16in;<vcpkg>\installedd-windowsin;%PATH%"
+set "PATH=D:\deps\Qt\6.8.3\msvc2022_64\bin;%CD%\build\openeb-install\bin;<opencv>\x64\vc16\bin;<vcpkg>\installed\x64-windows\bin;%PATH%"
 ```
 
 Adjust the paths to your machine (`<opencv>` is the prebuilt/vcpkg OpenCV
