@@ -34,7 +34,7 @@ public:
     /// Invoked on the reader thread the first time an IMU / APS packet is
     /// actually decoded (true = IMU, false = APS) — side-stream presence by
     /// content, not by stream declaration.
-    void set_side_stream_discovered(std::function<void(bool)> fn) {
+    void set_side_stream_discovered(std::function<void(bool)> fn) override {
         side_stream_discovered_ = std::move(fn);
     }
 

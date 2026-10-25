@@ -311,7 +311,7 @@ TEST_P(SparseOpticalFlowRawTest, EmitsFiniteFlowVectors) {
     }
     // LucasKanade/BlockMatch may be conservative; only LocalPlanes is expected
     // to fire reliably. Assert no NaN and at least *some* finite output overall.
-    EXPECT_NO_FATAL_FAILURE();
+
 }
 INSTANTIATE_TEST_SUITE_P(AllModes, SparseOpticalFlowRawTest,
     ::testing::Values(
@@ -342,7 +342,7 @@ TEST_P(DenseOpticalFlowRawTest, ProducesFiniteFlowMap) {
             }
         }
     }
-    EXPECT_NO_FATAL_FAILURE();
+
 }
 INSTANTIATE_TEST_SUITE_P(AllModes, DenseOpticalFlowRawTest,
     ::testing::Values(
@@ -371,7 +371,7 @@ TEST_F(FrequencyMapRawTest, ProducesFiniteFrequencyMap) {
             }
         }
     }
-    EXPECT_NO_FATAL_FAILURE();
+
 }
 
 // =========================================================================
