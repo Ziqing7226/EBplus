@@ -309,9 +309,12 @@ TEST_P(SparseOpticalFlowRawTest, EmitsFiniteFlowVectors) {
         }
         flows.clear();
     }
-    // LucasKanade/BlockMatch may be conservative; only LocalPlanes is expected
-    // to fire reliably. Assert no NaN and at least *some* finite output overall.
-
+    // LucasKanade/BlockMatch may be conservative; only LocalPlanes is
+    // expected to fire reliably, so require at least one finite vector
+    // there (all modes are already checked for NaN above).
+    if (mode == SparseOpticalFlow::Mode::LocalPlanes) {
+        EXPECT_GT(finite_vectors, 0) << "LocalPlanes produced no finite vectors";
+    }
 }
 INSTANTIATE_TEST_SUITE_P(AllModes, SparseOpticalFlowRawTest,
     ::testing::Values(

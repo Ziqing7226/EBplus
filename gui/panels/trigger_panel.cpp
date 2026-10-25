@@ -243,7 +243,7 @@ void TriggerPanel::populate_trigger_in() {
         try { cb->setChecked(tin->is_enabled(ch)); } catch (...) {}
         // Insert before the hint label (which is the first child); append after it.
         tin_layout_->addWidget(cb);
-        connect(cb, &QCheckBox::toggled, this, [this, ch, cb](bool on) {
+        connect(cb, &QCheckBox::toggled, this, [this, ch = ch, cb](bool on) {
             if (!camera_) return;
             auto* tin = camera_->trigger_in_facility();
             if (!tin) return;

@@ -238,9 +238,7 @@ public:
             double lx = 0.0, ly = 0.0, total = 0.0;
             Metavision::timestamp gt = 0;
             bool first = true;
-            int raw_mass = 0;
             for (const auto& m : c.members) {
-                raw_mass += static_cast<int>(m.wt);
                 if (first) {
                     lx = m.px; ly = m.py; total = m.wt; gt = m.ts;
                     first = false;

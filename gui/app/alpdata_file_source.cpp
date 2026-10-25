@@ -156,7 +156,9 @@ private:
         while (p + 8 <= end) {
             const std::uint16_t type = f_.u16(p);
             const std::uint16_t size = f_.u16(p + 2);
-            if (size > kMaxMessageBytes || p + 8 + size > end) break;
+            // size is u16 (max 65535), so it can never exceed the 64 MiB
+            // message cap on its own - only the area bounds check can fire.
+            if (p + 8 + size > end) break;
             const std::uint64_t next = p + pad8(8 + size);
             if (next <= p) break;
             if (type == 0x0010) {

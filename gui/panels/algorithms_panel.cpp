@@ -964,9 +964,13 @@ void AlgorithmsPanel::refresh_param_values() {
         // restored nothing (the widgets kept the pre-load state and the
         // shared conditioners were never told).
         if (!masters_synced) {
-            auto read_master = [&](const char* key) -> std::string {
+            // Copy the structured binding: implicitly capturing it in a
+            // lambda is a C++20 extension and AppleClang rejects the C++17
+            // form with a warning.
+            const std::string algo_name_str = algo_name;
+            auto read_master = [&, algo_name_str](const char* key) -> std::string {
                 if (inst) return inst->get_param(key);
-                auto cv = bridge_->get_cached_algo_param(algo_name, key);
+                auto cv = bridge_->get_cached_algo_param(algo_name_str, key);
                 return cv ? *cv : std::string();
             };
             const std::string fen = read_master("preproc_filter_enabled");
