@@ -26,7 +26,7 @@
 
 事件相机——也称神经形态视觉传感器——不采集帧:它以微秒级时间分辨率逐像素报告亮度变化,兼具高动态范围与低功耗。处理这种数据流通常意味着厂商专属工具加自写脚本;EB plus 用一个开源桌面工作台覆盖完整流程:
 
-- **一个 GUI 接三家厂商** —— Prophesee、CenturyArks、iniVation 相机并排连接(见[相机支持表](#支持的相机))
+- **一个 GUI 接三家厂商** —— Prophesee、CenturyArks、iniVation 设备出现在同一设备列表中(见[相机支持表](#支持的相机))
 - **完整工作流** —— 实时显示、相机控制、录制回放、棋盘格标定、HDF5 / CSV / AVI 导出
 - **内置 25 个算法** —— 噪声滤波、光流、跟踪、XYT 三维点云、深度学习事件转视频(E2VID 系列)与 DL 稠密光流
 - **不止 Ubuntu** —— 在 OpenEB 之上补齐 Windows 11 与 macOS 支持,三平台每次推送均通过 CI 验证
@@ -149,7 +149,7 @@ Event-to-Video 算法默认使用 **E2VID**,共提供 **4 种 DL 模式**(GUI �
 **部署**(一次性,约 10 分钟):
 
 ```bash
-cd /path/to/GUI-for-openEB
+cd /path/to/EBplus
 
 # 1. ONNX Runtime 1.19.2(CPU)装入 third_party/
 mkdir -p third_party/onnxruntime && cd third_party/onnxruntime

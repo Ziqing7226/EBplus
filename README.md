@@ -26,7 +26,7 @@ Real-time visualization · camera control · recording & playback · calibration
 
 Event cameras — also called neuromorphic vision sensors — don't capture frames; they report per-pixel brightness changes at microsecond resolution, with high dynamic range and low power. Working with that stream usually means vendor-specific tools plus custom scripts. EB plus is one open-source desktop workbench for the whole workflow:
 
-- **One GUI for three vendors** — Prophesee, CenturyArks and iniVation cameras connect side by side (see the [camera table](#supported-cameras))
+- **One GUI for three vendors** — Prophesee, CenturyArks and iniVation devices share one device list (see the [camera table](#supported-cameras))
 - **The complete workflow** — live view, camera control, recording & playback, chessboard calibration, HDF5 / CSV / AVI export
 - **25 algorithms built in** — noise filtering, optical flow, tracking, XYT 3D point cloud, deep-learning event-to-video (E2VID family) and DL dense optical flow
 - **Windows and macOS, not just Ubuntu** — EB plus builds on OpenEB with Windows 11 and macOS support, CI-tested on all three platforms on every push
@@ -149,7 +149,7 @@ The Event-to-Video algorithm defaults to **E2VID** and offers **4 DL modes** (se
 **Setup** (one-time, ~10 minutes):
 
 ```bash
-cd /path/to/GUI-for-openEB
+cd /path/to/EBplus
 
 # 1. ONNX Runtime 1.19.2 (CPU) into third_party/
 mkdir -p third_party/onnxruntime && cd third_party/onnxruntime
