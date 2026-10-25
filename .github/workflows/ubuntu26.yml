@@ -63,16 +63,14 @@ jobs:
           # UDEV_RULES_SYSTEM_INSTALL=OFF: the rules CMakeLists hardcodes
           # /etc/udev/rules.d as an install side effect, the CI user has no
           # root, and the SDK consumes the copy under the install prefix.
-          # The vendored OpenEB's own warning in
-          # v4l2_hardware_identification.cpp (upstream source, not patched
-          # here) is suppressed via the CXXFLAGS environment variable —
-          # CMake appends it to the platform defaults instead of replacing
-          # them (the -DCMAKE_CXX_FLAGS form lost MSVC's /EHsc on the
-          # Windows runner and broke boost exception linking there).
-          # -Wno-deprecated hides the deprecation notice for
-          # hal_psee_plugins' explicit CMP0095 OLD pin; -Wno-policy
-          # silences the boost policy notice without changing resolution.
-          CXXFLAGS=-Wno-return-type cmake -Wno-policy -Wno-deprecated -S openeb -B build/openeb -G Ninja \
+          # The vendored OpenEB's own warning (control reaching the end of
+          # get_sensor_info in v4l2_hardware_identification.cpp) is fixed in
+          # the source: raise_error is now [[noreturn]] because it always
+          # throws — no compiler suppression flags. -Wno-deprecated /
+          # -Wno-policy only hide cmake's own notices for the CMP0095 OLD
+          # pin and the boost wrapper (changing those would alter install
+          # RPATH / resolution semantics).
+          cmake -Wno-policy -Wno-deprecated -S openeb -B build/openeb -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=OFF \
             -DBUILD_SAMPLES=OFF \

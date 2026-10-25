@@ -97,19 +97,16 @@ jobs:
 
       - name: Build vendored OpenEB (SDK + HAL plugins)
         run: |
-          # The vendored OpenEB's own MSVC warnings (upstream sources:
-          # C4250 virtual dominance in the gen31 device header,
-          # C4834/C4390/C4018/C4101/C4996, and C5051 in hdf5_ecf) are
-          # suppressed WITHOUT patching upstream files. The suppressions go
-          # through the CXXFLAGS environment variable on purpose: CMake
-          # APPENDS it to the platform defaults (/DWIN32 /D_WINDOWS /W3 /GR
-          # /EHsc), whereas -DCMAKE_CXX_FLAGS=... REPLACES them — losing
-          # /EHsc changed boost's exception model and broke the
-          # boost::throw_exception link in metavision_sdk_core (verified
-          # locally and on CI). -Wno-policy only silences the vcpkg boost
-          # wrapper's policy notice without changing resolution.
-          $env:CXXFLAGS = '/wd4250 /wd4834 /wd5051 /wd4390 /wd4018 /wd4101 /wd4996'
-          cmake -Wno-policy -S openeb -B build/openeb -G "$env:GENERATOR" -A x64 `
+          # The vendored OpenEB's own MSVC warnings are fixed in the sources
+          # themselves (no suppression flags): C4250 dominance spelled out in
+          # the gen31 device, C4834 honored in camera_serialization, C4390
+          # braced in cap_mjpeg, C4018 cast in register_map, C4101 dropped in
+          # tz_streamer, C4996 ISO names in utils_fx3_ram_flash, C5051 via
+          # C++17 for the hdf5_ecf plugin. Only cmake-level notices remain:
+          # -Wno-policy/-Wno-deprecated hide the vcpkg boost wrapper's policy
+          # notice and the CMP0095 OLD-pin deprecation notice (changing those
+          # would alter resolution / install RPATH semantics).
+          cmake -Wno-policy -Wno-deprecated -S openeb -B build/openeb -G "$env:GENERATOR" -A x64 `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/openeb/cmake/toolchains/vcpkg.cmake" `
             -DVCPKG_DIRECTORY="$env:GITHUB_WORKSPACE/vcpkg" `
             -DCMAKE_BUILD_TYPE=Release `
