@@ -33,6 +33,10 @@ class HotPixelFilterBackend final : public AlgoBackend {
     RoiFilter roi_;
     std::vector<gui_algo::Event> roi_buf_;
     std::size_t last_kept_{0};
+    // The output span points into whichever buffer the compacted events live
+    // in (buf_ directly, or roi_buf_ when the ROI filter redirected), so no
+    // copy-back is needed.
+    const Metavision::EventCD* span_ptr_{nullptr};
 public:
     HotPixelFilterBackend(int w, int h) : algo_(w, h) { roi_.init(w, h); }
     void set_param(const std::string& k, const std::string& v) override {
@@ -56,25 +60,32 @@ public:
         auto* ev = const_cast<gui_algo::Event*>(ev_c);
         algo_.learn(ev, n);
         last_kept_ = algo_.process(ev, n);
-        // pull_result reads from buf_: if roi_.apply() filtered into another
-        // buffer (roi_buf_ or Preprocessor::buf_), copy the compacted result
-        // back; otherwise the in-place compact already happened in buf_.
+        // Expose the compacted events from whichever buffer they now live
+        // in — no copy-back round trip.
         if (ev_c != as_events(buf_.data())) {
-            buf_.assign(reinterpret_cast<const Metavision::EventCD*>(ev_c),
-                        reinterpret_cast<const Metavision::EventCD*>(ev_c + last_kept_));
+            span_ptr_ = reinterpret_cast<const Metavision::EventCD*>(roi_buf_.data());
         } else {
             buf_.resize(last_kept_);
+            span_ptr_ = buf_.data();
         }
     }
     AlgoResult pull_result() override {
         AlgoResult r;
+        // hot_pixel_count() is a full W×H mask scan; computed on the pull
+        // side (display rate) on purpose — the push side runs per USB batch.
         r.status = "hot_pixel: " + std::to_string(algo_.hot_pixel_count()) + " hot px, kept " +
                    std::to_string(last_kept_) + std::string(roi_.region.enabled ? " (ROI)" : "");
         return r;
     }
-    void reset() override { algo_.reset(); buf_.clear(); roi_buf_.clear(); last_kept_ = 0; }
+    void reset() override {
+        algo_.reset();
+        buf_.clear();
+        roi_buf_.clear();
+        last_kept_ = 0;
+        span_ptr_ = nullptr;
+    }
     std::pair<const Metavision::EventCD*, std::size_t> output_span() const override {
-        return {buf_.data(), last_kept_};
+        return {span_ptr_, last_kept_};
     }
     void set_sensor_dimensions(int w, int h) override {
         roi_.set_sensor_dimensions(w, h);
@@ -87,6 +98,8 @@ public:
         algo_.set_enable_fpn_correction(fpn);
         algo_.set_fpn_alpha(fa);
         algo_.set_fpn_mixing_factor(fm);
+        span_ptr_ = nullptr;
+        last_kept_ = 0;
     }
 };
 
