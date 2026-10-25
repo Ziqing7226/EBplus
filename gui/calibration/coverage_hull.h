@@ -15,6 +15,9 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+// OpenCV 5.0 moved the 2D geometry helpers (convexHull, contourArea,
+// boundingRect, minAreaRect, ...) out of imgproc — see opencv5_compat.h.
+#include "algo/common/opencv5_compat.h"
 
 namespace gui {
 

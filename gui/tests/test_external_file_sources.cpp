@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -65,6 +66,17 @@ struct Buf {
         }
     }
 };
+
+// POSIX-only "/tmp" hardcodes broke the Windows build — resolve the temp
+// directory through std::filesystem instead.
+std::string temp_path(const char* name) {
+    static const std::filesystem::path dir = [] {
+        std::filesystem::path d = std::filesystem::temp_directory_path() / "ebplus_tests";
+        std::filesystem::create_directories(d);
+        return d;
+    }();
+    return (dir / name).string();
+}
 
 bool write_file(const std::string& path, const Buf& buf) {
     FILE* f = std::fopen(path.c_str(), "wb");
@@ -447,7 +459,7 @@ TEST(Aedat4Source, EndToEndMiniFile) {
     file.b.insert(file.b.end(), ftab.b.begin(), ftab.b.end());
     file.patch64(io_start + table_pos_patch, table_pos);
 
-    const std::string path = "/tmp/ebplus_test_mini.aedat4";
+    const std::string path = temp_path("ebplus_test_mini.aedat4");
     ASSERT_TRUE(write_file(path, file));
 
     auto src = gui::try_open_external_file(path);
@@ -481,7 +493,7 @@ TEST(Aedat4Source, EndToEndMiniFile) {
     EXPECT_EQ(events[4].p, 0);
     EXPECT_EQ(events[4].x, 100);
 
-    EXPECT_EQ(gui::try_open_external_file("/tmp/some.raw"), nullptr);
+    EXPECT_EQ(gui::try_open_external_file(temp_path("does_not_exist.raw")), nullptr);
     EXPECT_TRUE(gui::is_external_file_extension("x.AEDAT4"));
     EXPECT_FALSE(gui::is_external_file_extension("x.raw"));
 }
@@ -503,7 +515,7 @@ TEST(Aedat4Source, RejectsNonEventFile) {
     file.b.insert(file.b.end(), io.b.begin(), io.b.end());
     append_packet(file, 0, frme_packet_body());
 
-    const std::string path = "/tmp/ebplus_test_frames_only.aedat4";
+    const std::string path = temp_path("ebplus_test_frames_only.aedat4");
     ASSERT_TRUE(write_file(path, file));
     auto src = gui::try_open_external_file(path);
     ASSERT_NE(src, nullptr);
@@ -885,7 +897,7 @@ TEST(AlpdataSource, EndToEndMiniFile) {
         f.patch64(pos, value);
     }
 
-    const std::string path = "/tmp/ebplus_test_mini.alpdata";
+    const std::string path = temp_path("ebplus_test_mini.alpdata");
     ASSERT_TRUE(write_file(path, f));
 
     auto src = gui::try_open_external_file(path);

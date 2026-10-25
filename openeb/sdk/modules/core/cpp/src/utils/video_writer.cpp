@@ -51,7 +51,12 @@
 //M*/
 
 #include <opencv2/videoio.hpp>
+// Note: <opencv2/core/types_c.h> was removed in OpenCV 5.0 (the entire C API
+// was dropped). Nothing from that legacy header is used in this file, so the
+// include is simply omitted on OpenCV >= 5.
+#if CV_MAJOR_VERSION < 5
 #include <opencv2/core/types_c.h>
+#endif
 
 #include "metavision/sdk/base/utils/sdk_log.h"
 #include "metavision/sdk/core/utils/video_writer.h"
@@ -93,13 +98,27 @@ using Mat              = ::cv::Mat;
 using ParallelLoopBody = ::cv::ParallelLoopBody;
 using Range            = ::cv::Range;
 
-namespace Error {
-enum Code {
-    StsAssert       = ::cv::Error::StsAssert,
-    StsOutOfRange   = ::cv::Error::StsOutOfRange,
-    StsVecLengthErr = ::cv::Error::StsVecLengthErr
+// OpenCV 5.0 changed cv::error() to take cv::Error::Code (a scoped enum
+// type) instead of int. The original cv45::Error enum was a *different*
+// enum type with the same values, so cv45::Error::StsAssert would not
+// match cv::error()'s parameter type on OpenCV 5.0. Aliasing cv45::Error
+// to ::cv::Error makes cv45::Error::StsAssert resolve to the real
+// ::cv::Error::StsAssert (type ::cv::Error::Code), so the CV_Error_/
+// CV_Error/CV_Assert macros (which forward to cv::error) compile on
+// both OpenCV 4.x and 5.0.
+namespace Error = ::cv::Error;
+
+#if CV_MAJOR_VERSION >= 5
+// Cv32suf was removed with the C API in OpenCV 5.0. The vendored MJPEG
+// encoder uses it for float/int type-punning, so provide a local equivalent
+// inside the cv45 namespace (the #define cv cv45 block below remaps
+// namespace cv in the included .cpp files to cv45).
+union Cv32suf {
+    int i;
+    unsigned u;
+    float f;
 };
-}
+#endif
 
 using ::cv::error;
 using ::cv::format;
@@ -343,6 +362,15 @@ cv::String VideoWriter::getBackendName() const {
 #endif
 }
 
+#if CV_MAJOR_VERSION >= 5
+bool VideoWriter::write(cv::InputArray image) {
+    if (writer_) {
+        writer_->write(image);
+        return true;
+    }
+    return cv::VideoWriter::write(image);
+}
+#else
 void VideoWriter::write(cv::InputArray image) {
     if (writer_) {
         writer_->write(image);
@@ -354,6 +382,7 @@ void VideoWriter::write(cv::InputArray image) {
     cv::VideoWriter::write(image);
 #endif
 }
+#endif
 
 VideoWriter &VideoWriter::operator<<(const cv::Mat &image) {
     if (writer_) {

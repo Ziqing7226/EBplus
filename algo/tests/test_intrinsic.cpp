@@ -13,11 +13,12 @@
 
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include <random>
 #include <vector>
 
 #include <opencv2/core.hpp>
-#include <opencv2/calib3d.hpp>
+#include "algo/common/opencv5_compat.h"
 #include <opencv2/imgproc.hpp>
 
 #include "algo/calibration/intrinsic.h"
@@ -44,7 +45,13 @@ SyntheticViews make_views(std::size_t n_views,
     const double fx = 500.0, fy = 500.0, cx = 320.0, cy = 240.0;
 
     SyntheticViews sv;
-    sv.K = (cv::Mat_<double>(3, 3) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
+    // cv::Mat_'s comma initializer is deprecated in OpenCV 5 — fill by hand.
+    sv.K = cv::Mat_<double>(3, 3);
+    {
+        double* k = sv.K.ptr<double>();
+        const double vals[9] = {fx, 0, cx, 0, fy, cy, 0, 0, 1};
+        for (int i = 0; i < 9; ++i) k[i] = vals[i];
+    }
 
     // Object grid: 9×6 inner corners at (c·20, r·20, 0) mm.
     for (int r = 0; r < kRows; ++r)
@@ -70,9 +77,15 @@ SyntheticViews make_views(std::size_t n_views,
             p.x += static_cast<float>(noise(rng));
             p.y += static_cast<float>(noise(rng));
         }
-        // Corrupt the view if requested (large coherent offset → huge RMS).
+        // Corrupt the view if requested by shuffling the 2D point order, so
+        // the point-to-grid correspondence is wrong. A pixel shift is a bad
+        // choice here: the solver can fold a uniform shift into the principal
+        // point (which LM basin it picks differs per platform), making the
+        // rejection outcome platform-dependent. A shuffled correspondence is
+        // genuinely unfittable — the corrupted views' RMS stays an order of
+        // magnitude above the clean ones on every toolchain.
         if (i < corrupt.size() && corrupt[i]) {
-            for (auto& p : pts) { p.x += 200.0f; p.y -= 200.0f; }
+            std::shuffle(pts.begin(), pts.end(), rng);
         }
         sv.image_points.push_back(std::move(pts));
     }

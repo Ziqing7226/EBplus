@@ -25,10 +25,10 @@
 #include <thread>
 #include <vector>
 
-#include <opencv2/calib3d.hpp>   // findChessboardCorners + CALIB_CB_* (OpenCV 5.0)
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
+// OpenCV 5.0 split calib3d and imgproc — see opencv5_compat.h.
+#include "algo/common/opencv5_compat.h"
 
 #include <metavision/sdk/base/events/event_cd.h>
 #include <metavision/sdk/base/utils/timestamp.h>
@@ -150,15 +150,14 @@ int main(int argc, char** argv) {
         cv::Mat bf_bin;
         cv::threshold(bf.frame, bf_bin, 128, 255, cv::THRESH_BINARY_INV);
         const int n_black = cv::countNonZero(bf_bin);
-        double bfrac = 0.0, bb_area = 0.0;
+        double bfrac = 0.0;
         std::vector<std::vector<cv::Point>> bcontours;
         cv::findContours(bf_bin, bcontours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         if (!bcontours.empty()) {
             std::sort(bcontours.begin(), bcontours.end(),
                       [](const auto& a, const auto& b) { return cv::contourArea(a) > cv::contourArea(b); });
             const auto& big = bcontours[0];
-            cv::Rect bb = cv::boundingRect(big);
-            bb_area = static_cast<double>(bb.width) * bb.height;
+            const cv::Rect bb = cv::boundingRect(big);
             bfrac = static_cast<double>(n_black) / (W * H);
             std::fprintf(stderr, "[probe]   board=%d (%.1f%%)  largest comp bbox=%dx%d+%d+%d  "
                          "valid=%d\n",

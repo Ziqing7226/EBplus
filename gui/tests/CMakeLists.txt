@@ -9,7 +9,12 @@
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
-set(GUI_TEST_COMPILE_OPTS -Wall -Wextra)
+# GCC/Clang-only flags: MSVC rejects them (and would misparse -Wall as /Wall).
+if(MSVC)
+    set(GUI_TEST_COMPILE_OPTS "")
+else()
+    set(GUI_TEST_COMPILE_OPTS -Wall -Wextra)
+endif()
 
 # --- test_theme_tokens: header-only token contrast check (no gui_core link). ---
 add_executable(test_theme_tokens
@@ -22,7 +27,21 @@ target_link_libraries(test_theme_tokens PRIVATE
     GTest::Main
 )
 target_compile_options(test_theme_tokens PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_theme_tokens)
+ebplus_gtest_discover_tests(test_theme_tokens)
+
+# --- test_icon_provider: embedded SVGs render through QtSvg. ---
+add_executable(test_icon_provider
+    test_icon_provider.cpp
+    ../resources/icons.qrc
+)
+target_link_libraries(test_icon_provider PRIVATE
+    gui_core
+    GTest::GTest
+)
+target_compile_options(test_icon_provider PRIVATE ${GUI_TEST_COMPILE_OPTS})
+ebplus_gtest_discover_tests(test_icon_provider
+    PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)
 
 # --- test_algo_bridge: registry, idempotent find_or_create, flood guard. ---
 add_executable(test_algo_bridge
@@ -34,7 +53,7 @@ target_link_libraries(test_algo_bridge PRIVATE
     GTest::Main
 )
 target_compile_options(test_algo_bridge PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_algo_bridge)
+ebplus_gtest_discover_tests(test_algo_bridge)
 
 # --- test_config_manager: algorithm-state serialization round-trip. ---
 add_executable(test_config_manager
@@ -46,7 +65,7 @@ target_link_libraries(test_config_manager PRIVATE
     GTest::Main
 )
 target_compile_options(test_config_manager PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_config_manager)
+ebplus_gtest_discover_tests(test_config_manager)
 
 # --- test_panel_visibility: Phase 1 capability framework — facility-backed
 # hardware panels hide for sources lacking trigger/ESP (needs QApplication). ---
@@ -58,7 +77,7 @@ target_link_libraries(test_panel_visibility PRIVATE
     GTest::GTest
 )
 target_compile_options(test_panel_visibility PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_panel_visibility
+ebplus_gtest_discover_tests(test_panel_visibility
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -72,7 +91,7 @@ target_link_libraries(test_aedat4_playback PRIVATE
     GTest::GTest
 )
 target_compile_options(test_aedat4_playback PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_aedat4_playback
+ebplus_gtest_discover_tests(test_aedat4_playback
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -87,7 +106,7 @@ target_link_libraries(test_esp_panel_duty PRIVATE
     GTest::GTest
 )
 target_compile_options(test_esp_panel_duty PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_esp_panel_duty
+ebplus_gtest_discover_tests(test_esp_panel_duty
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -102,7 +121,7 @@ target_link_libraries(test_aedat4_writer PRIVATE
     GTest::Main
 )
 target_compile_options(test_aedat4_writer PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_aedat4_writer)
+ebplus_gtest_discover_tests(test_aedat4_writer)
 
 # --- test_layout_manager: layout save/load symmetry (needs QApplication). ---
 # Custom main() creates an offscreen QApplication before InitGoogleTest, so we
@@ -115,7 +134,7 @@ target_link_libraries(test_layout_manager PRIVATE
     GTest::GTest
 )
 target_compile_options(test_layout_manager PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_layout_manager
+ebplus_gtest_discover_tests(test_layout_manager
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -128,7 +147,7 @@ target_link_libraries(test_display_strategy PRIVATE
     GTest::GTest
 )
 target_compile_options(test_display_strategy PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_display_strategy
+ebplus_gtest_discover_tests(test_display_strategy
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -141,7 +160,7 @@ target_link_libraries(test_calibration_tap PRIVATE
     GTest::GTest
 )
 target_compile_options(test_calibration_tap PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_calibration_tap
+ebplus_gtest_discover_tests(test_calibration_tap
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -149,14 +168,17 @@ gtest_discover_tests(test_calibration_tap
 add_executable(test_coverage_hull
     test_coverage_hull.cpp
 )
-target_include_directories(test_coverage_hull PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_include_directories(test_coverage_hull PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${PROJECT_SOURCE_DIR}
+)
 target_link_libraries(test_coverage_hull PRIVATE
     ${OpenCV_LIBS}
     GTest::GTest
     GTest::Main
 )
 target_compile_options(test_coverage_hull PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_coverage_hull)
+ebplus_gtest_discover_tests(test_coverage_hull)
 
 # --- test_preproc_routing: preproc params reach algorithm instances AND the
 # display pipeline (single panel control, two routes). ---
@@ -169,7 +191,7 @@ target_link_libraries(test_preproc_routing PRIVATE
     GTest::Main
 )
 target_compile_options(test_preproc_routing PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_preproc_routing
+ebplus_gtest_discover_tests(test_preproc_routing
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -184,7 +206,7 @@ target_link_libraries(test_stream_conditioner PRIVATE
     GTest::Main
 )
 target_compile_options(test_stream_conditioner PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_stream_conditioner
+ebplus_gtest_discover_tests(test_stream_conditioner
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -200,7 +222,7 @@ target_link_libraries(test_external_file_sources PRIVATE
     GTest::Main
 )
 target_compile_options(test_external_file_sources PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_external_file_sources
+ebplus_gtest_discover_tests(test_external_file_sources
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
 
@@ -215,6 +237,6 @@ target_link_libraries(test_davis_protocol PRIVATE
     GTest::Main
 )
 target_compile_options(test_davis_protocol PRIVATE ${GUI_TEST_COMPILE_OPTS})
-gtest_discover_tests(test_davis_protocol
+ebplus_gtest_discover_tests(test_davis_protocol
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )

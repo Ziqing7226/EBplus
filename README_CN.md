@@ -8,14 +8,21 @@
 
 ![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue)
 ![Language](https://img.shields.io/badge/C%2B%2B17-Qt%206-orange)
-![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![Platform](https://img.shields.io/badge/platform-Ubuntu%2026%20%C2%B7%20Windows%2011%20%C2%B7%20macOS-lightgrey)
+![Version](https://img.shields.io/badge/version-3.1.0-blue)
 
 ![主界面](pic/1.9.0.png)
 
 </div>
 
 ---
+
+## 3.1.0 更新内容
+
+- **跨平台支持**：除 Ubuntu 26.04 外，EB plus 现已支持 Windows 11（MSVC）与 macOS（Apple Silicon）构建运行——三平台每次推送均由 CI 验证；macOS 打包产出自包含的 `.app`/DMG（`scripts/build_macos_app.sh`）
+- **兼容 OpenCV 5**：版本守卫垫片让校准与图标路径在 OpenCV 4.x 与 5.x 下均可工作（含新的 `calib`/`geometry`/`objdetect` 模块拆分）
+- **更稳的棋盘救援**：角点桥接回退新增中值滤波变体，适配 OpenCV 4.13+/5.x 重写的检测器处理椒盐噪声损伤的二值帧；旧版 OpenCV 行为不变
+- 各平台构建指南：[Linux](wiki/compile.md) · [Windows 11](wiki/compile-windows.md) · [macOS](wiki/compile-macos.md)
 
 ## 3.0.0 新特性
 
@@ -57,7 +64,7 @@ cmake --build build -- -j$(nproc)
 
 启动脚本会自动处理 Wayland 兼容、HAL 插件路径和 OpenGL 后端选择。
 
-> **环境要求**：Ubuntu 26.04 · GCC 15 · Qt 6 · OpenCV 4——即本项目的实测构建环境（详见 [wiki/compile.md](wiki/compile.md)）。
+> **环境要求**：Ubuntu 26.04 · GCC 15 · Qt 6 · OpenCV 4——即参考构建环境；Windows 11（MSVC）与 macOS（Apple Silicon）亦已支持并通过 CI 验证。各平台构建指南：[Linux](wiki/compile.md) · [Windows](wiki/compile-windows.md) · [macOS](wiki/compile-macos.md)。
 
 ### 连接 inivation DAVIS / DVXplorer 相机（可选，初步支持）
 

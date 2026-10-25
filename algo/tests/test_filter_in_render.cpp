@@ -4,8 +4,9 @@
 #include <QCoreApplication>
 #include <cstdio>
 #include <cmath>
+#include <filesystem>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+#include "algo/common/opencv5_compat.h"
 
 #include <metavision/sdk/base/events/event_cd.h>
 
@@ -159,11 +160,24 @@ int main(int argc, char** argv) {
     // With a distortion calibration loaded, an event must be RENDERED at the
     // undistorted coordinate (matching cv::undistortPoints ground truth).
     {
-        const std::string yml = "/tmp/gui_test_calib.yml";
+        // POSIX-only "/tmp" breaks cv::FileStorage on Windows.
+        const std::string yml =
+            (std::filesystem::temp_directory_path() / "gui_test_calib.yml").string();
         cv::FileStorage fs(yml, cv::FileStorage::WRITE);
         fs << "image_width" << W << "image_height" << H;
-        cv::Mat K = (cv::Mat_<double>(3, 3) << 80, 0, 50, 0, 80, 50, 0, 0, 1);
-        cv::Mat dist = (cv::Mat_<double>(1, 5) << -0.25, 0.08, 0.0, 0.0, 0.0);
+        // comma initializer deprecated in OpenCV 5 — fill by hand.
+        cv::Mat K = cv::Mat_<double>(3, 3);
+        {
+            double* k = K.ptr<double>();
+            const double kv[9] = {80, 0, 50, 0, 80, 50, 0, 0, 1};
+            for (int i = 0; i < 9; ++i) k[i] = kv[i];
+        }
+        cv::Mat dist = cv::Mat_<double>(1, 5);
+        {
+            double* d = dist.ptr<double>();
+            const double dv[5] = {-0.25, 0.08, 0.0, 0.0, 0.0};
+            for (int i = 0; i < 5; ++i) d[i] = dv[i];
+        }
         fs << "camera_matrix" << K << "distortion_coefficients" << dist;
         fs.release();
 

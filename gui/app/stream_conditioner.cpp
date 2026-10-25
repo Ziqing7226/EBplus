@@ -1,14 +1,16 @@
 // gui/app/stream_conditioner.cpp — see stream_conditioner.h for the pipeline
-// description. The undistort LUT build is compiled here (calib3d) so the
-// header stays cheap; it moved from the per-instance Preprocessor, which no
-// longer undistorts.
+// description. The undistort LUT build is compiled here so the header stays
+// cheap; it moved from the per-instance Preprocessor, which no longer
+// undistorts.
 
 #include "stream_conditioner.h"
 
 #include <filesystem>
 #include <cstdio>
 
-#include <opencv2/calib3d.hpp>
+// OpenCV 5.0 moved undistortPoints from calib3d to the geometry module —
+// include the version-correct set (see opencv5_compat.h).
+#include "algo/common/opencv5_compat.h"
 
 #include "algo/common/event.h"
 #include "algo/calibration/intrinsic.h"

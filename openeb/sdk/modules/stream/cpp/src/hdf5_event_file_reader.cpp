@@ -13,6 +13,14 @@
 #include <limits>
 #include <sstream>
 #ifdef HAS_HDF5
+// HDF5 >= 1.14 splits the direct-chunk reader into H5Dread_chunk1/2 and, on
+// 2.x, maps the plain H5Dread_chunk name to H5Dread_chunk2, whose signature
+// takes an extra buffer-size argument. Pin the historical five-argument
+// variant through the API-version selector instead: on HDF5 < 1.14 (e.g.
+// Ubuntu's 1.10.x) the name is a plain function and this macro is unused,
+// on 1.14+/2.x it selects H5Dread_chunk1. Doing this before the include
+// keeps every call site below on the five-argument signature.
+#define H5Dread_chunk_vers 1
 #include <H5Cpp.h>
 #include <hdf5_ecf/ecf_codec.h>
 #endif

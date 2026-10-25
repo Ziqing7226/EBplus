@@ -8,14 +8,24 @@ Real-time visualization · camera control · recording & playback · calibration
 
 ![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue)
 ![Language](https://img.shields.io/badge/C%2B%2B17-Qt%206-orange)
-![Platform](https://img.shields.io/badge/platform-Linux-lightgrey)
-![Version](https://img.shields.io/badge/version-3.0.0-blue)
+![Platform](https://img.shields.io/badge/platform-Ubuntu%2026%20%C2%B7%20Windows%2011%20%C2%B7%20macOS-lightgrey)
+![Version](https://img.shields.io/badge/version-3.1.0-blue)
+[![Ubuntu 26.04](https://img.shields.io/badge/CI-Ubuntu%2026.04-success)](https://github.com/Ziqing7226/EBplus__more-than-gui-for-openeb/actions/workflows/ubuntu26.yml)
+[![Windows 11](https://img.shields.io/badge/CI-Windows%2011-success)](https://github.com/Ziqing7226/EBplus__more-than-gui-for-openeb/actions/workflows/windows11.yml)
+[![macOS](https://img.shields.io/badge/CI-macOS-success)](https://github.com/Ziqing7226/EBplus__more-than-gui-for-openeb/actions/workflows/macos.yml)
 
 ![Main Window](pic/1.9.0.png)
 
 </div>
 
 ---
+
+## What's new in 3.1.0
+
+- **Cross-platform**: EB plus now builds and runs on Windows 11 (MSVC) and macOS (Apple Silicon) in addition to Ubuntu 26.04 — all three are CI-tested on every push, and the macOS packaging produces a self-contained `.app`/DMG (`scripts/build_macos_app.sh`)
+- **OpenCV 5-ready**: version-guarded shims keep the calibration and icon paths working on both OpenCV 4.x and 5.x (the new `calib`/`geometry`/`objdetect` module split included)
+- **Robust chessboard rescue**: the corner-bridge fallback gained a medianBlur variant that the reworked OpenCV 4.13+/5.x detectors need on salt-and-pepper-damaged binary frames; on older OpenCV the behavior is unchanged
+- Per-platform build guides: [Linux](wiki/compile.md) · [Windows 11](wiki/compile-windows.md) · [macOS](wiki/compile-macos.md)
 
 ## What's new in 3.0.0
 
@@ -53,7 +63,7 @@ cmake --build build -- -j$(nproc)
 
 That's it. The launcher handles Wayland compatibility, HAL plugin paths, and OpenGL backend selection automatically.
 
-> **Requirements**: Ubuntu 26.04 · GCC 15 · Qt 6 · OpenCV 4 — the tested environment (see [wiki/compile.md](wiki/compile.md)).
+> **Requirements**: Ubuntu 26.04 · GCC 15 · Qt 6 · OpenCV 4 — the reference environment. Windows 11 (MSVC) and macOS (Apple Silicon) are also supported and CI-tested; see the per-platform build guides: [Linux](wiki/compile.md) · [Windows](wiki/compile-windows.md) · [macOS](wiki/compile-macos.md).
 
 ### Live inivation DAVIS / DVXplorer cameras (optional, preliminary)
 
