@@ -88,6 +88,23 @@ The binary lands at `build\gui\Release\gui_for_openeb.exe`. Launch it through
 backend, mirroring `run.sh` on Linux). Customise a `run.local.bat` copy for
 your camera hardware — it is git-ignored.
 
+### Running a source build without a system-wide install
+
+When Qt / OpenCV / the OpenEB SDK are not installed system-wide, the exe also
+needs their DLL directories on `PATH` (the HAL plugin path is already handled
+by `run.bat`). The easiest way is a private launcher: copy `run.bat` to
+`run.local.bat` (git-ignored) and prepend the DLL directories before the exe
+line, e.g.
+
+```bat
+rem runtime DLLs: Qt · vendored OpenEB SDK · OpenCV · vcpkg ports
+set "PATH=D:\deps\Qt.8.3\msvc2022_64in;%CD%uild\openeb-installin;<opencv>dc16in;<vcpkg>\installedd-windowsin;%PATH%"
+```
+
+Adjust the paths to your machine (`<opencv>` is the prebuilt/vcpkg OpenCV
+tree, `<vcpkg>` your vcpkg root). `run.local.bat` is git-ignored, so local
+absolute paths never reach the repository.
+
 ## 5. Tests
 
 ```powershell
