@@ -35,14 +35,14 @@ public:
     /// @param state If true, enables ROI. If false, disables it
     /// @warning At least one ROI should have been set before calling this function
     /// @return true on success
-    bool enable(bool state);
+    bool enable(bool state) override;
 
-    bool is_enabled() const;
+    bool is_enabled() const override;
 
     /// @brief Sets the window mode
     /// @param mode window mode to set (ROI or RONI)
     /// @return true on success
-    bool set_mode(const Mode &mode);
+    bool set_mode(const Mode &mode) override;
 
     I_ROI::Mode get_mode() const override;
 

@@ -57,7 +57,7 @@ std::vector<std::shared_ptr<BoardCommand>>
                 MV_HAL_LOG_TRACE() << "Register board command for" << cmd->get_name() << cmd->get_serial() << "("
                                    << std::hex << desc.idVendor << ":" << desc.idProduct << std::dec << ")";
             }
-        } catch (const HalException &e) {
+        } catch (const HalException &) {
             // Don't trace the reason, it's way too verbose, and there is probably no Treuzell interface
             continue;
         }

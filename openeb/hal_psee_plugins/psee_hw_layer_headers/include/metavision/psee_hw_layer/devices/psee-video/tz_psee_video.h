@@ -34,7 +34,7 @@ public:
     bool set_mode_master() override;
     bool set_mode_slave() override;
     I_CameraSynchronization::SyncMode get_mode() const override;
-    virtual I_HW_Identification::SensorInfo get_sensor_info() {
+    virtual I_HW_Identification::SensorInfo get_sensor_info() override {
         return {0, 0, "Gen0.0"};
     }
 };

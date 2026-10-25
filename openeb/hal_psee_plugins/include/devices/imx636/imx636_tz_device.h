@@ -38,21 +38,21 @@ public:
     virtual DeviceConfigOptionMap get_device_config_options() const override;
     StreamFormat set_output_format(const std::string &format_name) override;
     StreamFormat get_output_format() const override;
-    virtual long get_system_id() const;
-    virtual bool set_mode_standalone();
-    virtual bool set_mode_master();
-    virtual bool set_mode_slave();
-    virtual I_CameraSynchronization::SyncMode get_mode() const;
-    virtual I_HW_Identification::SensorInfo get_sensor_info() {
+    virtual long get_system_id() const override;
+    virtual bool set_mode_standalone() override;
+    virtual bool set_mode_master() override;
+    virtual bool set_mode_slave() override;
+    virtual I_CameraSynchronization::SyncMode get_mode() const override;
+    virtual I_HW_Identification::SensorInfo get_sensor_info() override {
         return {4, 2, "IMX636"};
     }
     long long get_sensor_id();
-    virtual int get_temperature();
-    virtual int get_illumination();
-    virtual int get_pixel_dead_time();
+    virtual int get_temperature() override;
+    virtual int get_illumination() override;
+    virtual int get_pixel_dead_time() override;
 
 protected:
-    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config);
+    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config) override;
 
     static std::string ROOT_PREFIX;
     static std::string SENSOR_PREFIX;

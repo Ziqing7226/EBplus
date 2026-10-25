@@ -39,20 +39,23 @@ public:
     bool set_mode_master() override;
     bool set_mode_slave() override;
     I_CameraSynchronization::SyncMode get_mode() const override;
-    virtual I_HW_Identification::SensorInfo get_sensor_info() {
+    virtual I_HW_Identification::SensorInfo get_sensor_info() override {
         return {3, 1, "Gen3.1"};
     }
-    virtual int get_illumination();
+    virtual int get_illumination() override;
 
     // TzPseeFpgaDevice and TzIssdDevice both derive from TzDevice; the
-    // compiler already resolves these via TzIssdDevice dominance - the
-    // explicit delegating overrides only spell that out (silences C4250).
+    // compiler already resolves these via dominance - the explicit
+    // delegating overrides only spell that out (silences C4250). Note the
+    // split: TzIssdDevice overrides the lifecycle hooks, TzPseeFpgaDevice
+    // overrides get_device_info (adding the FPGA system ID / version
+    // entries) - each delegation targets the base that actually overrides.
     void start() override { TzIssdDevice::start(); }
     void stop() override { TzIssdDevice::stop(); }
     void initialize() override { TzIssdDevice::initialize(); }
     void destroy() override { TzIssdDevice::destroy(); }
     void get_device_info(I_HW_Identification::SystemInfo &info, std::string prefix) override {
-        TzIssdDevice::get_device_info(info, prefix);
+        TzPseeFpgaDevice::get_device_info(info, prefix);
     }
 
     /// get the type of sensor

@@ -29,21 +29,21 @@ public:
                                            std::shared_ptr<TzDevice> parent);
     static bool can_build(std::shared_ptr<TzLibUSBBoardCommand>, uint32_t dev_id);
 
-    virtual void start();
-    virtual void stop();
+    virtual void start() override;
+    virtual void stop() override;
     virtual std::list<StreamFormat> get_supported_formats() const override;
     StreamFormat get_output_format() const override;
     virtual long get_system_id();
-    virtual bool set_mode_standalone();
-    virtual bool set_mode_master();
-    virtual bool set_mode_slave();
-    virtual I_CameraSynchronization::SyncMode get_mode() const;
-    virtual I_HW_Identification::SensorInfo get_sensor_info() {
+    virtual bool set_mode_standalone() override;
+    virtual bool set_mode_master() override;
+    virtual bool set_mode_slave() override;
+    virtual I_CameraSynchronization::SyncMode get_mode() const override;
+    virtual I_HW_Identification::SensorInfo get_sensor_info() override {
         return {3, 1, "Gen3.1"};
     }
     long long get_sensor_id();
-    virtual int get_temperature();
-    virtual int get_illumination();
+    virtual int get_temperature() override;
+    virtual int get_illumination() override;
     // The multi-base diamond already resolves get_device_info via
     // TzPseeFpgaDevice dominance - the explicit delegating override only
     // spells that out (silences MSVC C4250 without changing behavior).
@@ -57,7 +57,7 @@ public:
 
 
 protected:
-    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config);
+    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config) override;
 
 private:
     Evk2SystemControl sys_ctrl_;
