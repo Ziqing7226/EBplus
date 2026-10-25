@@ -49,7 +49,7 @@ public:
                   Metavision::timestamp tau_us = 10000,
                   double threshold = 1.0,
                   double reset_value = 0.0,
-                  Metavision::timestamp decay_step_us = 1000,
+                  Metavision::timestamp /*decay_step_us (unused)*/ = 1000,
                   double initial_potential_percent = 0.0,
                   double jump_after_firing_percent = 0.0)
         : width_(width), height_(height), tau_us_(tau_us),
