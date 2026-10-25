@@ -38,3 +38,9 @@ target_compile_options(bench_algo PRIVATE ${BENCH_COMPILE_OPTIONS})
 add_executable(bench_backends bench_backends.cpp)
 target_link_libraries(bench_backends PRIVATE gui_core)
 target_compile_options(bench_backends PRIVATE ${BENCH_COMPILE_OPTIONS})
+
+# RAW index build timing + seek bit-exact continuity (HAL level; needs a
+# .raw file argument). Exercises the pure file-side pipeline: no camera.
+add_executable(bench_index bench_index.cpp)
+target_link_libraries(bench_index PRIVATE gui_algo)
+target_compile_options(bench_index PRIVATE ${BENCH_COMPILE_OPTIONS})
