@@ -2,7 +2,7 @@
 
 # EB plus
 
-A polished, open-source Qt 6 desktop app for **event cameras** — built on [OpenEB](https://github.com/prophesee-ai/openeb) v5.2.0, the open-source core of the Prophesee Metavision SDK.
+A polished, open-source desktop app for **event cameras** — built on [OpenEB](https://github.com/prophesee-ai/openeb) v5.2.0.
 
 Real-time visualization · camera control · recording & playback · calibration · 25 algorithms · customizable themes
 
@@ -23,7 +23,7 @@ Real-time visualization · camera control · recording & playback · calibration
 
 ## Why EB plus?
 
-Event cameras — also called neuromorphic vision sensors — don't capture frames; they report per-pixel brightness changes at microsecond resolution, with high dynamic range and low power. Working with that stream usually means vendor-specific tools plus custom scripts. EB plus is one open-source desktop workbench for the whole workflow:
+Event cameras — also called neuromorphic vision sensors — don't capture frames; they report per-pixel brightness changes at microsecond resolution, with high dynamic range and low power. Working with that stream usually means vendor-specific tools plus custom scripts. EB plus — built on OpenEB, the open-source core of the Prophesee Metavision SDK — is one desktop workbench for the whole workflow:
 
 - **One GUI for three vendors** — Prophesee, CenturyArks and iniVation devices share one device list (see the [camera table](#supported-cameras))
 - **The complete workflow** — live view, camera control, recording & playback, chessboard calibration, HDF5 / CSV / AVI export

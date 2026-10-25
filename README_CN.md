@@ -2,7 +2,7 @@
 
 # EB plus
 
-基于 [OpenEB](https://github.com/prophesee-ai/openeb) v5.2.0(Prophesee Metavision SDK 的开源核心)构建的开源 Qt 6 事件相机桌面应用。
+基于 [OpenEB](https://github.com/prophesee-ai/openeb) v5.2.0 构建的开源事件相机桌面应用。
 
 实时可视化 · 相机控制 · 录制回放 · 标定 · 25 个算法 · 可定制主题
 
@@ -23,7 +23,7 @@
 
 ## 为什么选择 EB plus?
 
-事件相机——也称神经形态视觉传感器——不采集帧:它以微秒级时间分辨率逐像素报告亮度变化,兼具高动态范围与低功耗。处理这种数据流通常意味着厂商专属工具加自写脚本;EB plus 用一个开源桌面工作台覆盖完整流程:
+事件相机——也称神经形态视觉传感器——不采集帧:它以微秒级时间分辨率逐像素报告亮度变化,兼具高动态范围与低功耗。处理这种数据流通常意味着厂商专属工具加自写脚本;EB plus 基于 OpenEB——Prophesee Metavision SDK 的开源核心——用一个桌面工作台覆盖完整流程:
 
 - **一个 GUI 接三家厂商** —— Prophesee、CenturyArks、iniVation 设备出现在同一设备列表中(见[相机支持表](#支持的相机))
 - **完整工作流** —— 实时显示、相机控制、录制回放、棋盘格标定、HDF5 / CSV / AVI 导出
