@@ -18,7 +18,7 @@ Install Xcode command line tools and Homebrew dependencies:
 
 ```bash
 xcode-select --install
-brew install cmake qtbase qtsvg opencv boost libusb protobuf abseil hdf5
+brew install cmake qtbase qtsvg opencv boost libusb protobuf abseil hdf5 ripgrep
 ```
 
 The packaging script reads Qt base frameworks and plugins from the `qtbase` prefix, and the Qt SVG runtime from the `qtsvg` prefix. EBplus links that runtime directly to render its activity-bar icons.
