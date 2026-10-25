@@ -19,6 +19,9 @@
 #include <metavision/hal/facilities/i_event_decoder.h>
 #include <metavision/hal/facilities/i_events_stream_decoder.h>
 #include <metavision/sdk/base/events/event_cd.h>
+#include <metavision/sdk/stream/camera.h>
+#include <metavision/sdk/stream/file_config_hints.h>
+#include <metavision/sdk/stream/offline_streaming_control.h>
 
 #include <chrono>
 #include <cstdint>
@@ -118,6 +121,15 @@ int time_mode(const std::string& raw) {
     const double s = std::chrono::duration<double>(t1 - t0).count();
     std::printf("index build: %.3f s (status %d, range [%lld, %lld])\n", s, static_cast<int>(status),
                 static_cast<long long>(start_ts), static_cast<long long>(end_ts));
+    // Duration through the SDK reader (the same OfflineStreamingControl
+    // call the GUI's duration query uses) - printed for old/new
+    // implementation comparison; the value must be identical.
+    {
+        Metavision::Camera cam = Metavision::Camera::from_file(
+            raw, Metavision::FileConfigHints().real_time_playback(false));
+        const auto d = cam.offline_streaming_control().get_duration();
+        std::printf("duration: %lld\n", static_cast<long long>(d));
+    }
     return status == Metavision::I_EventsStream::IndexStatus::Good ? 0 : 1;
 }
 
