@@ -2,51 +2,47 @@
 
 # EB plus
 
-A polished, open-source Qt 6 desktop app for event cameras — built on [openEB](https://github.com/prophesee-ai/openeb) v5.2.0.
+A polished, open-source Qt 6 desktop app for **event cameras** — built on [OpenEB](https://github.com/prophesee-ai/openeb) v5.2.0, the open-source core of the Prophesee Metavision SDK.
 
 Real-time visualization · camera control · recording & playback · calibration · 25 algorithms · customizable themes
+
+**English** · [简体中文](README_CN.md)
 
 ![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue)
 ![Language](https://img.shields.io/badge/C%2B%2B17-Qt%206-orange)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%2026%20%C2%B7%20Windows%2011%20%C2%B7%20macOS-lightgrey)
 ![Version](https://img.shields.io/badge/version-3.1.0-blue)
-[![Ubuntu 26.04](https://img.shields.io/badge/CI-Ubuntu%2026.04-success)](https://github.com/Ziqing7226/EBplus__more-than-gui-for-openeb/actions/workflows/ubuntu26.yml)
-[![Windows 11](https://img.shields.io/badge/CI-Windows%2011-success)](https://github.com/Ziqing7226/EBplus__more-than-gui-for-openeb/actions/workflows/windows11.yml)
-[![macOS](https://img.shields.io/badge/CI-macOS-success)](https://github.com/Ziqing7226/EBplus__more-than-gui-for-openeb/actions/workflows/macos.yml)
+[![Ubuntu 26.04](https://img.shields.io/badge/CI-Ubuntu%2026.04-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/ubuntu26.yml)
+[![Windows 11](https://img.shields.io/badge/CI-Windows%2011-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/windows11.yml)
+[![macOS](https://img.shields.io/badge/CI-macOS-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/macos.yml)
 
-![Main Window](pic/1.9.0.png)
+![EB plus main window: real-time event-camera visualization](pic/1.9.0.png)
 
 </div>
 
 ---
 
-## What's new in 3.1.0
+## Why EB plus?
 
-- **Cross-platform**: EB plus now builds and runs on Windows 11 (MSVC) and macOS (Apple Silicon) in addition to Ubuntu 26.04 — all three are CI-tested on every push, and the macOS packaging produces a self-contained `.app`/DMG (`scripts/build_macos_app.sh`)
-- **OpenCV 5-ready**: version-guarded shims keep the calibration and icon paths working on both OpenCV 4.x and 5.x (the new `calib`/`geometry`/`objdetect` module split included)
-- **Robust chessboard rescue**: the corner-bridge fallback gained a medianBlur variant that the reworked OpenCV 4.13+/5.x detectors need on salt-and-pepper-damaged binary frames; on older OpenCV the behavior is unchanged
-- Per-platform build guides: [Linux](wiki/compile.md) · [Windows 11](wiki/compile-windows.md) · [macOS](wiki/compile-macos.md)
+Event cameras — also called neuromorphic vision sensors — don't capture frames; they report per-pixel brightness changes at microsecond resolution, with high dynamic range and low power. Working with that stream usually means vendor-specific tools plus custom scripts. EB plus is one open-source desktop workbench for the whole workflow:
 
-## What's new in 3.0.0
+- **One GUI for three vendors** — Prophesee, CenturyArks and iniVation cameras connect side by side (see the [camera table](#supported-cameras))
+- **The complete workflow** — live view, camera control, recording & playback, chessboard calibration, HDF5 / CSV / AVI export
+- **25 algorithms built in** — noise filtering, optical flow, tracking, XYT 3D point cloud, deep-learning event-to-video (E2VID family) and DL dense optical flow
+- **Windows and macOS, not just Ubuntu** — EB plus builds on OpenEB with Windows 11 and macOS support, CI-tested on all three platforms on every push
+- **Fully open source** — MIT-licensed original code on the Apache-2.0 OpenEB SDK; no account, registration or license key
 
-- **Inivation live cameras**: DAVIS240A/B/C, DAVIS346, DAVIS640, CDAVIS and DVXplorer connect directly — events, full bias control (Auto Bias included), hardware ROI on DAVIS, IMU stream with a 3D attitude view, and APS frame preview (color on supported sensors)
-- **IMU attitude reworked**: instant alignment, rest re-centers the attitude, closed paths return; the IMU and APS views are now dockable side panels
-- **AEDAT4 recording** for inivation cameras (DV-native, interoperable) now carries optional IMU samples and APS frames, and replays surface them like a live camera; LZ4-compressed DV recordings open directly
-- **Calibration** scales its Auto Bias band and event buffering with the camera resolution; the square-size workflow no longer discards captures
-- Capability-aware UI: panels auto-hide when the connected camera lacks the hardware behind them
+## Supported cameras
 
-## What is this?
+| Vendor | Models | Live support |
+|--------|--------|--------------|
+| Prophesee | any camera exposed by the installed Metavision HAL plugin | full — events, biases, ROI, anti-flicker / trail filter / ERC, triggers, RAW recording |
+| CenturyArks | SilkyEvCam, via its Metavision-compatible HAL plugin | same stack as Prophesee |
+| iniVation | DAVIS346, DVXplorer — hardware-tested; DAVIS240A/B/C, DAVIS640, CDAVIS — follow the reference implementation, not yet hardware-tested | preliminary — events, full bias control (Auto Bias included), hardware ROI (DAVIS), IMU attitude view, APS frame preview, AEDAT4 recording |
 
-**EB plus** is a beautiful, open-source, feature-rich GUI for event cameras (Prophesee / CenturyArks). Event cameras don't capture frames — they report per-pixel brightness changes at microsecond resolution. EB plus gives you a complete desktop workflow to work with this data:
+File playback needs no camera: RAW files, plus the event streams of AEDAT4 and ALPDATA recordings.
 
-- **See** the event stream in real time (OpenGL, 60+ FPS)
-- **Control** the camera — biases, ROI, anti-flicker, triggers
-- **Record & replay** event files (RAW, plus event streams from AEDAT4 and ALPDATA recordings) with speed control and seek
-- **Run algorithms** — noise filtering, optical flow, object tracking, event-to-video, and more
-- **Calibrate** the camera with a chessboard wizard
-- **Export** to HDF5 / CSV / AVI
-
-The whole project is open source — feel free to fork it and adapt it to whatever you need.
+iniVation support is optional at build time — without libusb-1.0 development files the build simply excludes it. One-time USB setup and per-model notes: [wiki/Getting-Started.md](wiki/Getting-Started.md).
 
 ---
 
@@ -63,18 +59,30 @@ cmake --build build -- -j$(nproc)
 
 That's it. The launcher handles Wayland compatibility, HAL plugin paths, and OpenGL backend selection automatically.
 
-> **Requirements**: Ubuntu 26.04 · GCC 15 · Qt 6 · OpenCV 4 — the reference environment. Windows 11 (MSVC) and macOS (Apple Silicon) are also supported and CI-tested; see the per-platform build guides: [Linux](wiki/compile.md) · [Windows](wiki/compile-windows.md) · [macOS](wiki/compile-macos.md).
+> **Requirements**: Ubuntu 26.04 · GCC 15 · Qt 6 · OpenCV 4 — the reference environment. Windows 11 (MSVC) and macOS (Apple Silicon) are also supported and CI-tested; see the per-platform build guides: [Linux](wiki/compile.md) · [Windows 11](wiki/compile-windows.md) · [macOS](wiki/compile-macos.md).
 
-### Live inivation DAVIS / DVXplorer cameras (optional, preliminary)
+### Manual launch (Ubuntu)
 
-**Preliminary support** for the inivation DAVIS240A/B/C, DAVIS346, DAVIS640, CDAVIS and DVXplorer — live events, full bias control with Auto Bias, hardware ROI (DAVIS), an IMU attitude view and APS frame preview (color on supported sensors), plus DV-native AEDAT4 recording (events + IMU + APS). The 240/640/CDAVIS models follow the reference implementation but are not yet hardware-tested; EB plus remains primarily designed and tested for **Prophesee** cameras. One-time setup — allow USB access for inivation devices:
+<details>
+<summary>Env vars & camera vendor paths</summary>
 
 ```bash
-sudo cp gui/davis/66-inivation.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules && sudo udevadm trigger
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib"
+export HDF5_PLUGIN_PATH="/usr/local/lib/hdf5/plugin"
+export MV_HAL_PLUGIN_PATH=/usr/local/lib/metavision/hal/plugins  # Prophesee
+# export MV_HAL_PLUGIN_PATH=/usr/lib/CenturyArks/hal/plugins     # CenturyArks
+export QT_QPA_PLATFORM=xcb       # Wayland renders black for QOpenGLWidget
+export QSG_RHI_BACKEND=opengl    # Qt 6 may default to Vulkan
+
+./build/gui/gui_for_openeb
 ```
 
-Unplug and replug the camera, then connect from the Devices panel. This feature is optional: without libusb-1.0 development files the build simply excludes it. See [wiki/Getting-Started.md](wiki/Getting-Started.md) for details and current limitations.
+| Vendor | HAL plugin path |
+|--------|----------------|
+| Prophesee | `/usr/local/lib/metavision/hal/plugins` |
+| CenturyArks | `/usr/lib/CenturyArks/hal/plugins` |
+
+</details>
 
 ---
 
@@ -199,7 +207,7 @@ In the GUI: **Algorithm → Event → Video** (defaults to E2VID mode: 128×128 
 ## Directory Structure
 
 ```
-GUI-for-openEB/
+EBplus/
 ├── gui/              # Qt 6 application
 │   ├── main_window.*     # Main window: title-bar menus, docks, signal wiring
 │   ├── display/          # OpenGL viewport, overlays, 3D cloud
@@ -211,44 +219,12 @@ GUI-for-openEB/
 │   ├── calibration/      # Intrinsic wizard
 │   └── widgets/          # Title bar, ActivityBar, AlgoWindow, pixel probe
 ├── algo/              # Self-developed algorithm library (29 modules)
-├── openeb/            # openEB SDK (Apache 2.0, v5.2.0)
+├── openeb/            # OpenEB SDK (Apache 2.0, v5.2.0)
 ├── models/            # E2VID PyTorch → ONNX conversion
 ├── run.sh             # Launcher (sets env vars)
 ├── wiki/              # Docs: compile guide, algorithms, architecture
 └── pic/               # Screenshots
 ```
-
----
-
-## Running
-
-### Option 1: Launcher (Recommended)
-
-```bash
-./run.sh
-```
-
-The launcher auto-detects Wayland, forces XCB + OpenGL (avoids black screen), and sets HAL/HDF5 plugin paths.
-
-### Option 2: Manual
-
-```bash
-export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib"
-export HDF5_PLUGIN_PATH="/usr/local/lib/hdf5/plugin"
-export MV_HAL_PLUGIN_PATH=/usr/local/lib/metavision/hal/plugins  # Prophesee
-# export MV_HAL_PLUGIN_PATH=/usr/lib/CenturyArks/hal/plugins     # CenturyArks
-export QT_QPA_PLATFORM=xcb       # Wayland renders black for QOpenGLWidget
-export QSG_RHI_BACKEND=opengl    # Qt 6 may default to Vulkan
-
-./build/gui/gui_for_openeb
-```
-
-### Camera Vendor Paths
-
-| Vendor | HAL plugin path |
-|--------|----------------|
-| Prophesee | `/usr/local/lib/metavision/hal/plugins` |
-| CenturyArks | `/usr/lib/CenturyArks/hal/plugins` |
 
 ---
 
@@ -284,7 +260,7 @@ EB plus is under active development and may still contain bugs. If you encounter
 ## License
 
 - **Original code**: [MIT](LICENSE)
-- **openEB SDK**: [Apache 2.0](openeb/licensing/LICENSE_OPEN) — copyright Prophesee
+- **OpenEB SDK**: [Apache 2.0](openeb/licensing/LICENSE_OPEN) — copyright Prophesee
 - **Inivation live-camera support** (`gui/davis/`): protocol, register tables and
   defaults ported from [dv-processing](https://gitlab.com/inivation/dv/dv-processing)
   ([Apache 2.0](https://gitlab.com/inivation/dv/dv-processing/-/blob/master/LICENSE), © iniVation AG) — attribution headers in each file
@@ -298,6 +274,6 @@ EB plus is under active development and may still contain bugs. If you encounter
 
 <div align="center">
 
-Built with Qt 6 · OpenCV · openEB SDK
+Built with Qt 6 · OpenCV · the OpenEB SDK
 
 </div>
