@@ -385,16 +385,10 @@ class SensorSelfTestBackend final : public AlgoBackend {
     int sensor_w_{0}, sensor_h_{0};
     std::unique_ptr<gui_algo::SensorSelfTest> algo_;
     std::vector<Metavision::EventCD> passthrough_;
-    // The full report (with bad-pixel coordinates) is expensive to compute
-    // (O(N log N) for the median/p90 sort), so it is cached and recomputed
-    // every ~30 frames (~0.5s at 60fps). The per-frame AlgoWindow status
-    // label uses a concise one-line summary (via count_pixels(), O(N) with
-    // a trivial constant) instead of the full multi-line report.
-    int frame_counter_{0};
-    std::string cached_report_;
     // Flag set by the close handler via set_param("__final_report", "1")
     // so the next pull_result() returns the full report in r.status for
-    // the close dialog. Cleared after one use.
+    // the close dialog. Cleared after one use. The report itself is
+    // computed fresh at that moment (O(N log N) — too expensive per frame).
     bool final_report_requested_{false};
 public:
     explicit SensorSelfTestBackend(int w, int h) : sensor_w_(w), sensor_h_(h) {
@@ -402,8 +396,7 @@ public:
     }
     void rebuild() {
         algo_ = std::make_unique<gui_algo::SensorSelfTest>(sensor_w_, sensor_h_);
-        cached_report_.clear();
-        frame_counter_ = 0;
+        passthrough_.clear();
         final_report_requested_ = false;
     }
     void set_param(const std::string& k, const std::string& v) override {
@@ -423,22 +416,21 @@ public:
     AlgoResult pull_result() override {
         AlgoResult r;
         r.has_frame = true;
-        r.frame = algo_->render().clone();
+        // render() returns a freshly allocated Mat — no clone needed.
+        r.frame = algo_->render();
         // Close handler requested the full report — compute it fresh and
         // return it in r.status for the dialog. This is a one-shot flag.
         if (final_report_requested_) {
             final_report_requested_ = false;
-            cached_report_ = algo_->report();
-            r.status = cached_report_;
+            r.status = algo_->report();
             return r;
         }
-        // Recompute the cached report periodically for potential future use.
-        if (cached_report_.empty() || frame_counter_ % 30 == 0) {
-            cached_report_ = algo_->report();
-        }
-        ++frame_counter_;
         // Per-frame status: concise one-line summary (not the full report,
         // which would flood the AlgoWindow status label every frame).
+        // Computed on the pull side on purpose: in live mode the push rate
+        // (per USB batch, ~hundreds/s) is far higher than the display rate,
+        // so caching this on the push side would burn MORE CPU on the
+        // hotter thread.
         const auto c = algo_->count_pixels();
         r.status = "Triggered: " + std::to_string(c.triggered) + "/" +
                    std::to_string(c.total) + " | Measured: " +
@@ -449,8 +441,6 @@ public:
     void reset() override {
         if (algo_) algo_->reset();
         passthrough_.clear();
-        cached_report_.clear();
-        frame_counter_ = 0;
         final_report_requested_ = false;
     }
     void set_sensor_dimensions(int w, int h) override {

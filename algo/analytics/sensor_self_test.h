@@ -84,19 +84,24 @@ public:
     /// mapping of min interval (brighter = shorter refractory period).
     cv::Mat render() const {
         cv::Mat img(height_, width_, CV_8UC3);
-        const std::size_t total = static_cast<std::size_t>(width_) * height_;
-        for (std::size_t idx = 0; idx < total; ++idx) {
-            const int y = static_cast<int>(idx / width_);
-            const int x = static_cast<int>(idx % width_);
-            if (last_ts_[idx] == kNeverSeen) {
-                // Suspected bad pixel — red.
-                img.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 255);
-            } else if (min_interval_[idx] == kNoInterval) {
-                // Only one event — insufficient data, render dark.
-                img.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
-            } else {
-                const int v = lut_[interval_to_lut_index(min_interval_[idx])];
-                img.at<cv::Vec3b>(y, x) = cv::Vec3b(v, v, v);
+        // Row-pointer traversal over the same flat indices (idx = y*width+x)
+        // as before — identical writes, minus the per-pixel at<> bounds
+        // checks and the div/mod index arithmetic.
+        for (int y = 0; y < height_; ++y) {
+            auto* row = img.ptr<cv::Vec3b>(y);
+            const std::size_t base = static_cast<std::size_t>(y) * width_;
+            for (int x = 0; x < width_; ++x) {
+                const std::size_t idx = base + static_cast<std::size_t>(x);
+                if (last_ts_[idx] == kNeverSeen) {
+                    // Suspected bad pixel — red.
+                    row[x] = cv::Vec3b(0, 0, 255);
+                } else if (min_interval_[idx] == kNoInterval) {
+                    // Only one event — insufficient data, render dark.
+                    row[x] = cv::Vec3b(0, 0, 0);
+                } else {
+                    const int v = lut_[interval_to_lut_index(min_interval_[idx])];
+                    row[x] = cv::Vec3b(v, v, v);
+                }
             }
         }
         return img;
