@@ -258,14 +258,16 @@ void FileFrameGenerator::on_timer() {
     // Render events in [start, end) to frame_.
     render_frame(start, end);
 
-    // Convert BGR → RGB and emit.
+    // Convert BGR → RGB and emit. The QImage owns its buffer and cvtColor
+    // writes straight into it — one allocation, no second full-frame copy.
     if (!frame_.empty()) {
-        cv::Mat rgb;
-        cv::cvtColor(frame_, rgb, cv::COLOR_BGR2RGB);
-        QImage img(rgb.data, rgb.cols, rgb.rows,
-                   static_cast<int>(rgb.step), QImage::Format_RGB888);
-        QImage copy = img.copy();
-        emit frame_ready(std::move(copy), start);
+        QImage img(frame_.cols, frame_.rows, QImage::Format_RGB888);
+        if (!img.isNull()) {
+            cv::Mat dst_view(frame_.rows, frame_.cols, CV_8UC3, img.bits(),
+                             static_cast<size_t>(img.bytesPerLine()));
+            cv::cvtColor(frame_, dst_view, cv::COLOR_BGR2RGB);
+            emit frame_ready(std::move(img), start);
+        }
     }
 
     cursor_us_ = end;
