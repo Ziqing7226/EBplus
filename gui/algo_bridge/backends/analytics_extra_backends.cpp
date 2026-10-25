@@ -88,7 +88,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         if (algo_.phase() == gui_algo::FreqDetector::Phase::Initializing) {
             r.hint = "LED frequency measurement (spectral method)\n"
                      "Keep the camera and the light source relatively still (" +
@@ -179,7 +178,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         const auto now = std::chrono::steady_clock::now();
         const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             now - last_analyze_).count();

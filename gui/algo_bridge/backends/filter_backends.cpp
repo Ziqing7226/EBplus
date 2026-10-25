@@ -77,7 +77,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // Per-event colored events (jAER DvsOrientationEvent coloring).
         r.colored_events.reserve(last_orientations_.size());
         for (std::size_t i = 0; i < last_orientations_.size() && i < filtered_.size(); ++i) {
@@ -203,7 +202,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // Per-event colored events (jAER DirEvent coloring, 8 colors).
         // 8-direction palette: 0=E red, 1=NE orange, 2=N yellow, 3=NW green,
         // 4=W cyan, 5=SW blue, 6=S magenta, 7=SE white.
@@ -330,7 +328,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         r.has_frame = true;
         cv::Mat frame = algo_.mask().clone();
         if (algo_.collect()) {

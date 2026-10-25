@@ -68,7 +68,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events.assign(buf_.data(), buf_.data() + last_kept_);
         r.status = "hot_pixel: " + std::to_string(algo_.hot_pixel_count()) + " hot px, kept " +
                    std::to_string(last_kept_) + std::string(roi_.region.enabled ? " (ROI)" : "");
         return r;
@@ -129,7 +128,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = buf_;
         const auto m = algo_.smoothed_motion();
         // Translation vector (jAER OpticalGyro.drawVector):
         // arrow from chip center showing cumulative shift.
@@ -227,7 +225,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         const auto& objs = algo_.objects();
         r.boxes.reserve(objs.size());
         r.lines.reserve(objs.size());
@@ -331,7 +328,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         for (const auto& c : algo_.corners()) {
             OverlayPoint p;
             p.x = static_cast<int>(c.x);
@@ -389,7 +385,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         for (const auto& blob : algo_.blobs()) {
             OverlayBox box;
             box.x = blob.bbox.x; box.y = blob.bbox.y;
@@ -499,7 +494,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // Fixed-grid arrows: average the flow vectors inside each grid cell
         // and draw ONE arrow per cell (cell centre), length = mean speed *
         // pps_scale capped at the grid spacing so arrows never overflow
@@ -623,7 +617,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         cv::Mat flow, conf;
         algo_.get_flow(flow, conf);
         // Fixed-grid arrows: average the per-pixel flow inside each grid
@@ -763,7 +756,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         cv::Mat frame = algo_.get_frame();
         if (!frame.empty()) {
             r.has_frame = true;

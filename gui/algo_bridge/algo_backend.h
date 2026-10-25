@@ -79,7 +79,6 @@ struct OverlayTrajectory {
 
 /// @brief 算法执行结果。由 AlgoBackend::pull_result() 返回。
 struct AlgoResult {
-    std::vector<Metavision::EventCD> filtered_events;  ///< 过滤后事件流
     std::string status;                                 ///< 人类可读状态
     bool has_frame{false};                              ///< 是否产生帧
     cv::Mat frame;                                      ///< 帧产生型算法的输出帧

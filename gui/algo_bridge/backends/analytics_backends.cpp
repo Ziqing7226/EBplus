@@ -52,7 +52,6 @@ class EventToVideoBackend final : public AlgoBackend {
     std::unique_ptr<gui_algo::EventToVideo> algo_;
     std::vector<Metavision::EventCD> passthrough_;
     std::vector<gui_algo::Event> roi_events_;
-    bool filtered_active_{false};  ///< true when ROI/preproc modified events (N4)
     Preprocessor preproc_;
 public:
     EventToVideoBackend(int w, int h) : sensor_w_(w), sensor_h_(h) {
@@ -326,30 +325,16 @@ public:
             crop_to_roi(ev, n, roi_, &preproc_, roi_events_);
             ev = roi_events_.data();
             n = roi_events_.size();
-            filtered_active_ = true;
         } else if (preproc_.active() && n > 0) {
             auto [p, m] = preproc_.apply(ev, n);
             roi_events_.assign(p, p + m);
             ev = roi_events_.data();
             n = m;
-            filtered_active_ = true;
-        } else {
-            filtered_active_ = false;
         }
         algo_->process(ev, n);
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        // Return the post-ROI/preproc events when filtering was applied;
-        // otherwise return the raw passthrough (N4). gui_algo::Event and
-        // Metavision::EventCD are layout-compatible (static_assert in
-        // as_events), so reinterpret_cast is safe.
-        if (filtered_active_) {
-            const auto* cd = reinterpret_cast<const Metavision::EventCD*>(roi_events_.data());
-            r.filtered_events.assign(cd, cd + roi_events_.size());
-        } else {
-            r.filtered_events = passthrough_;
-        }
         r.has_frame = true;
         cv::Mat frame = algo_->get_frame();
         const int f = preproc_.factor();
@@ -380,7 +365,6 @@ public:
         if (algo_) algo_->reset();
         passthrough_.clear();
         roi_events_.clear();
-        filtered_active_ = false;
     }
     void set_sensor_dimensions(int w, int h) override {
         sensor_w_ = w;
@@ -438,7 +422,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         r.has_frame = true;
         r.frame = algo_->render().clone();
         // Close handler requested the full report — compute it fresh and
