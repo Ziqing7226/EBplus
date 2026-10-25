@@ -42,6 +42,10 @@ private:
     long rate_accum_events_{0};
     double rate_accum_time_{0};
     double smoothed_rate_{0};
+    /// Frame count / label size at the last image render: the 30 Hz tick
+    /// skips the conversion + resample when neither changed.
+    long last_rendered_count_{-1};
+    QSize last_rendered_size_;
 };
 
 } // namespace gui
