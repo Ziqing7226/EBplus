@@ -88,3 +88,10 @@ option(GUI_FOR_OPENEB_BUILD_TESTS "Build algorithm unit tests" ON)
 if(GUI_FOR_OPENEB_BUILD_TESTS)
     add_subdirectory(algo/tests)
 endif()
+
+# Local performance benchmark harness (never built by default, not run in
+# CI). Enable with -DEBPLUS_BUILD_BENCHMARKS=ON. See benchmarks/CMakeLists.txt.
+option(EBPLUS_BUILD_BENCHMARKS "Build the local performance benchmark harness" OFF)
+if(EBPLUS_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
