@@ -290,6 +290,13 @@ private:
         if (offset_ >= num_indexes_) {
             return false;
         }
+        // The read buffer must always hold a FULL chunk: H5Dread_chunk
+        // writes the whole chunk as stored in the file, regardless of how
+        // many indexes remain. A previous partial chunk shrank the vector
+        // (resize never reallocates on grow, but the size must be restored
+        // so the write stays in bounds). The vector is trimmed back to the
+        // valid count after the read, preserving the iteration semantics.
+        indexes_.resize(chunk_size_);
         hsize_t offset[1] = {offset_};
         std::uint32_t filters;
         if (H5Dread_chunk(dset_.getId(), H5P_DEFAULT, offset, &filters, indexes_.data()) < 0) {
