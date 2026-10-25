@@ -77,7 +77,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // Per-event colored events (jAER DvsOrientationEvent coloring).
         r.colored_events.reserve(last_orientations_.size());
         for (std::size_t i = 0; i < last_orientations_.size() && i < filtered_.size(); ++i) {
@@ -203,7 +202,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // Per-event colored events (jAER DirEvent coloring, 8 colors).
         // 8-direction palette: 0=E red, 1=NE orange, 2=N yellow, 3=NW green,
         // 4=W cyan, 5=SW blue, 6=S magenta, 7=SE white.
@@ -301,9 +299,16 @@ class BackgroundMaskBackend final : public AlgoBackend {
     std::vector<Metavision::EventCD> passthrough_;
     RoiFilter roi_;
     std::vector<gui_algo::Event> roi_buf_;
+    // Once the learning window has elapsed the filter freezes: process()
+    // becomes a no-op and the mask only changes again via the parameter
+    // setters (which re-run compute_eroded_bitmap) or a rebuild. Cache the
+    // cloned frame for that phase instead of re-cloning per display frame.
+    bool frozen_cache_valid_{false};
+    cv::Mat frozen_frame_;
 public:
     BackgroundMaskBackend(int w, int h) : algo_(w, h) { roi_.init(w, h); }
     void set_param(const std::string& k, const std::string& v) override {
+        frozen_cache_valid_ = false;  // threshold/erosion may recompute the mask
         if (roi_.set_param(k, v)) return;
         // "learning_window_s" maps to the algo's learning window in seconds
         // (set_learning_window_s) — it is a window, not a rate (§五-B2).
@@ -330,15 +335,13 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         r.has_frame = true;
-        cv::Mat frame = algo_.mask().clone();
         if (algo_.collect()) {
             // Still inside the learning window: the mask is all-zero by design
             // (jAER leaves the bitmap null while collecting). Tell the user to
             // hold still — the foreground mask appears once the window elapses.
             cv::Mat bgr;
-            cv::cvtColor(frame, bgr, cv::COLOR_GRAY2BGR);
+            cv::cvtColor(algo_.mask(), bgr, cv::COLOR_GRAY2BGR);
             std::string msg = "Learning background, please keep the camera "
                               "still (" +
                               std::to_string(static_cast<int>(algo_.learning_window_s())) +
@@ -352,17 +355,33 @@ public:
             cv::putText(bgr, msg, org, cv::FONT_HERSHEY_SIMPLEX, font_scale,
                         cv::Scalar(0, 255, 0), 2);
             r.frame = bgr;
+            frozen_cache_valid_ = false;
         } else {
-            r.frame = frame;
+            // Frozen phase: the cached clone is bit-identical to what a
+            // fresh mask().clone() would produce (process() no longer
+            // touches the mask; param changes invalidate the cache above).
+            if (!frozen_cache_valid_) {
+                frozen_frame_ = algo_.mask().clone();
+                frozen_cache_valid_ = true;
+            }
+            r.frame = frozen_frame_;
         }
         r.status = "bg_mask: active" +
                    std::string(roi_.region.enabled ? " (ROI)" : "");
         return r;
     }
-    void reset() override { algo_.reset(); passthrough_.clear(); roi_buf_.clear(); }
+    void reset() override {
+        algo_.reset();
+        passthrough_.clear();
+        roi_buf_.clear();
+        frozen_cache_valid_ = false;
+        frozen_frame_.release();
+    }
     void set_sensor_dimensions(int w, int h) override {
         roi_.set_sensor_dimensions(w, h);
         algo_ = gui_algo::BackgroundMaskFilter(w, h);  // sensor-sized mask
+        frozen_cache_valid_ = false;
+        frozen_frame_.release();
     }
 };
 

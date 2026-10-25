@@ -125,7 +125,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // Shift ROI-relative endpoints back to sensor coordinates.
         const int dx = (roi_.enabled && roi_.rw > 0) ? roi_.x0 : 0;
         const int dy = (roi_.enabled && roi_.rh > 0) ? roi_.y0 : 0;
@@ -309,7 +308,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // Shift ROI-relative centers back to sensor coordinates.
         const int dx = (roi_.enabled && roi_.rw > 0) ? roi_.x0 : 0;
         const int dy = (roi_.enabled && roi_.rh > 0) ? roi_.y0 : 0;
@@ -371,7 +369,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         for (const auto& seg : last_) {
             OverlayLine l;
             l.x1 = static_cast<int>(seg.start.x); l.y1 = static_cast<int>(seg.start.y);
@@ -441,7 +438,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         for (const auto& c : last_) {
             OverlayLine l;
             l.x1 = static_cast<int>(c.centroid.x); l.y1 = static_cast<int>(c.centroid.y);
@@ -502,7 +498,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         for (const auto& c : last_) {
             OverlayBox box;
             box.x = static_cast<int>(c.position.x) - 5;

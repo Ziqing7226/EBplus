@@ -64,22 +64,20 @@ void BaseFrameGenerationAlgorithm::generate_frame_from_events(EventIt it_begin, 
                                                               const cv::Vec4b &bg_color,
                                                               const std::array<cv::Vec4b, 2> &off_on_colors,
                                                               int flags) {
-    std::ostringstream ss;
-    ss << "Incompatible matrix type. Must be ";
     int cv_type;
-    std::string cv_type_str;
     if (flags & Parameters::GRAY) {
-        cv_type     = CV_8UC1;
-        cv_type_str = "CV_8UC1";
+        cv_type = CV_8UC1;
     } else if (flags & Parameters::RGB || flags & Parameters::BGR) {
-        cv_type     = CV_8UC3;
-        cv_type_str = "CV_8UC3";
+        cv_type = CV_8UC3;
     } else {
-        cv_type     = CV_8UC4;
-        cv_type_str = "CV_8UC4";
+        cv_type = CV_8UC4;
     }
-    ss << cv_type_str << ".";
     if (frame.type() != cv_type) {
+        // Built only on the error path: formatting this message on every
+        // call was pure per-frame overhead (stream + string allocations).
+        std::ostringstream ss;
+        ss << "Incompatible matrix type. Must be "
+           << (cv_type == CV_8UC1 ? "CV_8UC1" : cv_type == CV_8UC3 ? "CV_8UC3" : "CV_8UC4") << ".";
         throw std::invalid_argument(ss.str());
     }
 

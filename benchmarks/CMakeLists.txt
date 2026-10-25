@@ -1,0 +1,40 @@
+# benchmarks/ — local performance measurement harness.
+#
+# NOT built by default and NOT run in CI: enable with
+#   cmake -DEBPLUS_BUILD_BENCHMARKS=ON ...
+# Every bench prints median timings and doubles as a bit-exactness guard:
+# the "save" mode records golden hashes of algorithm outputs, the "check"
+# mode re-verifies them, so an optimization that changes a single output
+# byte fails loudly. Golden files live OUTSIDE the repository (pass the
+# directory as an argument) — never commit them.
+
+if(NOT MSVC)
+    # Match the repo's strict-warning standard used by algo/tests.
+    set(BENCH_COMPILE_OPTIONS -Wall -Wextra -Werror)
+else()
+    set(BENCH_COMPILE_OPTIONS "")
+endif()
+
+# End-to-end offline RAW read+decode throughput (needs a .raw file argument).
+add_executable(bench_playback bench_playback.cpp)
+target_link_libraries(bench_playback PRIVATE gui_algo)
+target_compile_options(bench_playback PRIVATE ${BENCH_COMPILE_OPTIONS})
+
+# Mat -> QImage conversion chain A/B (old cvtColor+copy vs direct write),
+# including a byte-for-byte equality assert.
+add_executable(bench_frame_conv bench_frame_conv.cpp)
+target_link_libraries(bench_frame_conv PRIVATE gui_core)
+target_compile_options(bench_frame_conv PRIVATE ${BENCH_COMPILE_OPTIONS})
+
+# Header-only algorithm micro benches (TimeSurface render, XYT point cloud)
+# with golden save/check for cross-build bit-exactness.
+add_executable(bench_algo bench_algo.cpp)
+target_link_libraries(bench_algo PRIVATE gui_algo)
+target_compile_options(bench_algo PRIVATE ${BENCH_COMPILE_OPTIONS})
+
+# AlgoBackend push/pull benches via the public factory (time_surface,
+# hot_pixel_filter, freq_detector, background_mask, sensor_self_test) with
+# golden save/check over frame bytes + status + output span.
+add_executable(bench_backends bench_backends.cpp)
+target_link_libraries(bench_backends PRIVATE gui_core)
+target_compile_options(bench_backends PRIVATE ${BENCH_COMPILE_OPTIONS})

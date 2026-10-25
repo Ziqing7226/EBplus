@@ -124,16 +124,22 @@ void FramePipeline::recreate_window() {
                 return;
             }
             try {
-                cv::Mat rgb;
-                if (frame.channels() == 1) {
-                    cv::cvtColor(frame, rgb, cv::COLOR_GRAY2RGB);
-                } else {
-                    cv::cvtColor(frame, rgb, cv::COLOR_BGR2RGB);
+                // The QImage owns its buffer from the start and cvtColor
+                // writes straight into it through a stride-aware view — one
+                // allocation and no second full-frame copy (the emitted
+                // image uniquely owns its data, so the SDK-thread/GUI-thread
+                // handoff stays safe without the former deep copy).
+                QImage img(frame.cols, frame.rows, QImage::Format_RGB888);
+                if (!img.isNull()) {
+                    cv::Mat dst_view(frame.rows, frame.cols, CV_8UC3, img.bits(),
+                                     static_cast<size_t>(img.bytesPerLine()));
+                    if (frame.channels() == 1) {
+                        cv::cvtColor(frame, dst_view, cv::COLOR_GRAY2RGB);
+                    } else {
+                        cv::cvtColor(frame, dst_view, cv::COLOR_BGR2RGB);
+                    }
+                    emit frame_ready(std::move(img), ts);
                 }
-                QImage img(rgb.data, rgb.cols, rgb.rows,
-                           static_cast<int>(rgb.step), QImage::Format_RGB888);
-                QImage copy = img.copy(); // deep copy (rgb is local)
-                emit frame_ready(std::move(copy), ts);
             } catch (const std::exception&) {
                 // Swallow — the SDK thread must not propagate exceptions
             } catch (...) {}

@@ -2,7 +2,7 @@ name: macOS
 
 on:
   push:
-    branches: [main, develop-cross-platform]
+    branches: [main, develop-cross-platform, develop-perf-3.2.0]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -16,7 +16,7 @@ jobs:
     name: Build Apple Silicon app
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The secrets context is not available in step-level "if" expressions
       # (it invalidates the whole workflow), so it is surfaced to this step
@@ -28,7 +28,7 @@ jobs:
         continue-on-error: true
         env:
           EBPLUS_CI_TOKEN: ${{ secrets.EBPLUS_CI_TOKEN }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Ziqing7226/test
           token: ${{ env.EBPLUS_CI_TOKEN }}
@@ -65,12 +65,12 @@ jobs:
     name: Run Apple Silicon tests
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check out SilkyEvCam HAL plugin sources (optional)
         id: silky
         continue-on-error: true
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Ziqing7226/test
           token: ${{ secrets.EBPLUS_CI_TOKEN }}
@@ -107,12 +107,12 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check out SilkyEvCam HAL plugin sources (optional)
         id: silky
         continue-on-error: true
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Ziqing7226/test
           token: ${{ secrets.EBPLUS_CI_TOKEN }}

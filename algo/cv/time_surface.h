@@ -86,6 +86,7 @@ public:
           ts_buf_(height, width, static_cast<int>(channels_)) {
         ts_buf_.set_to(-1);  // -1 = sentinel for "never hit" (0 is a legal ts)
         alloc_potential();
+        rebuild_palette_lut();
     }
 
     /// @brief Updates the time surface with a batch of events.
@@ -207,8 +208,8 @@ public:
                 const auto* off = off_roi.ptr<std::uint8_t>(y);
                 const auto* on = on_roi.ptr<std::uint8_t>(y);
                 for (int x = 0; x < width_; ++x) {
-                    const cv::Vec3b c_off = map_color(off[x] / 255.0);
-                    const cv::Vec3b c_on = map_color(on[x] / 255.0);
+                    const cv::Vec3b c_off = palette_lut_[off[x]];
+                    const cv::Vec3b c_on = palette_lut_[on[x]];
                     // Per-channel max (§四-M2): cv::Vec3b + is a SATURATING
                     // add, so (c_off+c_on)*0.5 halved the brightness of
                     // single-polarity full-scale pixels (255 -> 128).
@@ -223,7 +224,7 @@ public:
                 auto* dst = img.ptr<cv::Vec3b>(y);
                 const auto* src = gray.ptr<std::uint8_t>(y);
                 for (int x = 0; x < width_; ++x) {
-                    dst[x] = map_color(src[x] / 255.0);
+                    dst[x] = palette_lut_[src[x]];
                 }
             }
         }
@@ -258,7 +259,10 @@ public:
     }
     Metavision::timestamp tau_us() const { return tau_us_; }
 
-    void set_palette(Palette p) { palette_ = p; }
+    void set_palette(Palette p) {
+        palette_ = p;
+        rebuild_palette_lut();
+    }
     Palette palette() const { return palette_; }
 
     void set_refresh_rate_hz(int hz) { refresh_rate_hz_ = clamp_refresh(hz); }
@@ -285,6 +289,16 @@ private:
         if (hz < 10) return 10;
         if (hz > 120) return 120;
         return hz;
+    }
+
+    /// @brief Rebuilds the 256-entry palette LUT from map_color(). Entries
+    /// are computed by the very same function the per-pixel loops used to
+    /// call, so palette_lut_[g] is bit-identical to map_color(g / 255.0).
+    void rebuild_palette_lut() {
+        palette_lut_.resize(256);
+        for (int i = 0; i < 256; ++i) {
+            palette_lut_[static_cast<std::size_t>(i)] = map_color(i / 255.0);
+        }
     }
 
     /// @brief Allocates the Exponential-mode potential surface.
@@ -368,6 +382,10 @@ private:
     /// OpenEB MostRecentTimestampBuffer — 直接引用，不自行实现时间戳缓冲区。
     /// 兼作 dv decayTimeSurface_ (每像素最近事件时间)。
     Metavision::MostRecentTimestampBuffer ts_buf_;
+    /// 256-entry pseudo-color LUT: palette_lut_[g] == map_color(g / 255.0).
+    /// Rebuilt whenever the palette changes so the per-pixel render loops
+    /// skip the branches/divisions of map_color (bit-identical output).
+    std::vector<cv::Vec3b> palette_lut_;
     Metavision::timestamp current_t_{-1};  // -1 = no event processed yet
 };
 

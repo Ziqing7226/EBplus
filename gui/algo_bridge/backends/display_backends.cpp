@@ -123,7 +123,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         r.has_frame = true;
         cv::Mat frame = algo_->render();
         const int f = preproc_.factor();
@@ -132,7 +131,10 @@ public:
             const int ah = roi_.enabled ? roi_.rh : sensor_h_;
             cv::resize(frame, frame, cv::Size(aw, ah), 0, 0, cv::INTER_NEAREST);
         }
-        r.frame = frame.clone();
+        // render() (and the resize branch above) return a freshly allocated
+        // Mat, so the refcount bump is sufficient — the deep clone only
+        // copied a buffer this backend already uniquely owns.
+        r.frame = frame;
         r.status = "time_surface: " + std::to_string(algo_->width()) + "x" +
                    std::to_string(algo_->height()) +
                    (roi_.enabled ? " (ROI)" : " (full)");
@@ -199,7 +201,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         // No overlay/frame: the 3D rendering is handled by SpaceTimeDisplay.
         r.status = "xyt: " + std::to_string(algo_.size()) + " buffered events" +
                    std::string(roi_.region.enabled ? " (ROI)" : " (full)");

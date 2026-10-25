@@ -88,6 +88,12 @@ private:
     int point_count_{0};
     int vbo_capacity_bytes_{0};
     bool gl_ready_{false};
+    /// Set by every path that changes the point cloud (event pushes, time
+    /// window / color / shading / geometry changes, clear); consumed by
+    /// paintGL so an idle window stops paying the 60 FPS rebuild + VBO
+    /// upload cost. Camera motion (auto-rotate, mouse) only changes the
+    /// MVP, not the cloud, and does not set this.
+    bool vbo_dirty_{true};
 
     /// Render timer ensures smooth 60 FPS rendering independent of event
     /// push timing (matching jAER's display-rate-driven rendering).

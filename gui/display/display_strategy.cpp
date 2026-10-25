@@ -44,12 +44,7 @@ namespace gui {
 
 QImage mat_to_qimage(const cv::Mat& mat) {
     if (mat.empty()) return QImage();
-    cv::Mat rgb;
-    if (mat.channels() == 1) {
-        cv::cvtColor(mat, rgb, cv::COLOR_GRAY2RGB);
-    } else if (mat.channels() == 3) {
-        cv::cvtColor(mat, rgb, cv::COLOR_BGR2RGB);
-    } else {
+    if (mat.channels() != 1 && mat.channels() != 3) {
         // Audit §五-G5: don't fail silently — a Replace-mode algorithm
         // producing an unsupported channel count would otherwise show a
         // black screen with no hint as to why. Throttled: first occurrence,
@@ -63,8 +58,18 @@ QImage mat_to_qimage(const cv::Mat& mat) {
         }
         return QImage();
     }
-    return QImage(rgb.data, rgb.cols, rgb.rows,
-                  static_cast<int>(rgb.step), QImage::Format_RGB888).copy();
+    // The QImage owns its buffer and cvtColor writes straight into it —
+    // one allocation, no second full-frame copy.
+    QImage img(mat.cols, mat.rows, QImage::Format_RGB888);
+    if (img.isNull()) return QImage();
+    cv::Mat dst_view(mat.rows, mat.cols, CV_8UC3, img.bits(),
+                     static_cast<size_t>(img.bytesPerLine()));
+    if (mat.channels() == 1) {
+        cv::cvtColor(mat, dst_view, cv::COLOR_GRAY2RGB);
+    } else {
+        cv::cvtColor(mat, dst_view, cv::COLOR_BGR2RGB);
+    }
+    return img;
 }
 
 // ---------------------------------------------------------------------------

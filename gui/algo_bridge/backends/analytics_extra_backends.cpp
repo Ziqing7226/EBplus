@@ -38,8 +38,6 @@ namespace gui {
 /// feature and the keep-still requirement instead of sources.
 class FreqDetectorBackend final : public AlgoBackend {
     gui_algo::FreqDetector algo_;
-    std::vector<Metavision::EventCD> passthrough_;
-    std::vector<gui_algo::Event> algo_buf_;
     std::vector<gui_algo::LightSource> last_;
     // Persisted so set_sensor_dimensions() rebuilds keep the user's settings
     // instead of reverting to ctor defaults.
@@ -81,14 +79,13 @@ public:
         return {};
     }
     void push_events(const Metavision::EventCD* b, const Metavision::EventCD* e) override {
-        passthrough_.assign(b, e);
-        algo_buf_.assign(b, e);
-        algo_.process(algo_buf_.data(), algo_buf_.size());
+        // Zero-copy feed: gui_algo::Event is layout-compatible with
+        // Metavision::EventCD (static_assert in as_events).
+        algo_.process(as_events(b), static_cast<std::size_t>(e - b));
         if (algo_.should_analyze()) last_ = algo_.analyze();
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         if (algo_.phase() == gui_algo::FreqDetector::Phase::Initializing) {
             r.hint = "LED frequency measurement (spectral method)\n"
                      "Keep the camera and the light source relatively still (" +
@@ -112,7 +109,7 @@ public:
         }
         return r;
     }
-    void reset() override { algo_.reset(); passthrough_.clear(); algo_buf_.clear(); last_.clear(); }
+    void reset() override { algo_.reset(); last_.clear(); }
     void set_sensor_dimensions(int w, int h) override {
         // Rebuild at the new dimensions and re-apply the persisted settings.
         algo_ = gui_algo::FreqDetector(w, h);
@@ -179,7 +176,6 @@ public:
     }
     AlgoResult pull_result() override {
         AlgoResult r;
-        r.filtered_events = passthrough_;
         const auto now = std::chrono::steady_clock::now();
         const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             now - last_analyze_).count();

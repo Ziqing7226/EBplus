@@ -172,6 +172,8 @@ SpaceTimeDisplay::~SpaceTimeDisplay() {
 void SpaceTimeDisplay::set_sensor_geometry(int width, int height) {
     sensor_w_ = (width > 0) ? width : 0;
     sensor_h_ = (height > 0) ? height : 0;
+    // Normalization in rebuild_vbo depends on the sensor dimensions.
+    vbo_dirty_ = true;
 }
 
 void SpaceTimeDisplay::push_events(const Metavision::EventCD* begin,
@@ -181,11 +183,13 @@ void SpaceTimeDisplay::push_events(const Metavision::EventCD* begin,
     // gui_algo::Event is layout-compatible with EventCD; reinterpret-cast view.
     const gui_algo::Event* ev = reinterpret_cast<const gui_algo::Event*>(begin);
     viz_.process(ev, n);
+    vbo_dirty_ = true;
     update();
 }
 
 void SpaceTimeDisplay::set_time_window_ms(float ms) {
     viz_.set_time_window_ms(ms);
+    vbo_dirty_ = true;
     update();
 }
 
@@ -197,6 +201,7 @@ void SpaceTimeDisplay::set_point_size(float s) {
 void SpaceTimeDisplay::set_color_mode(int mode) {
     viz_.set_color_mode(mode == 1 ? gui_algo::XYTVisualizer::ColorMode::Age
                                   : gui_algo::XYTVisualizer::ColorMode::Polarity);
+    vbo_dirty_ = true;
     update();
 }
 
@@ -207,6 +212,7 @@ void SpaceTimeDisplay::set_auto_rotate(bool on) {
 
 void SpaceTimeDisplay::set_depth_shade(bool on) {
     viz_.set_depth_shade(on);
+    vbo_dirty_ = true;
     update();
 }
 
@@ -214,6 +220,7 @@ void SpaceTimeDisplay::clear() {
     viz_.clear();
     points_.clear();
     point_count_ = 0;
+    vbo_dirty_ = true;
     update();
 }
 
@@ -394,7 +401,13 @@ void SpaceTimeDisplay::paintGL() {
         if (azimuth_ > 360.0f) azimuth_ -= 360.0f;
     }
 
-    rebuild_vbo();
+    // Rebuild only when the point cloud actually changed. Without this the
+    // 60 FPS render timer re-runs viz_.render + the full VBO upload even
+    // with zero new events (pure idle burn).
+    if (vbo_dirty_) {
+        rebuild_vbo();
+        vbo_dirty_ = false;
+    }
 
     // Compute MVP. jAER preserves the sensor aspect ratio: the box is
     // sx × sy × (smax * timeAspectRatio). We normalize by smax so the
