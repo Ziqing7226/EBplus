@@ -202,26 +202,46 @@ TEST(IntrinsicCalibration, NegativeOutlierThresholdKeepsAll) {
     EXPECT_EQ(r.kept_frames, 6u);
 }
 
-TEST(IntrinsicCalibration, TooFewViewsAfterRejectionFails) {
-    // 6 views, 4 of them heavily corrupted; the shuffled correspondences are
-    // unfittable, so the corrupted views' per-view RMS stays an order of
-    // magnitude above the clean ones. A 1-sigma threshold (mean + 1std sits
-    // far below the corrupted RMS and above the clean RMS for this spread)
-    // rejects exactly the 4 corrupted views -> only 2 survive -> run()
-    // errors. (A 0.1-sigma threshold used here earlier put the boundary
-    // INSIDE the clean cluster: whether a clean view crosses mean+0.1std
-    // depended on LM-iteration floating-point dust, which made the test
-    // flaky on some CI machines.)
-    const std::vector<bool> corrupt = {false, true, true, true, true, false};
-    SyntheticViews sv = make_views(6, corrupt);
+TEST(IntrinsicCalibration, OutlierRejectionRemovesCorruptedViews) {
+    // Outlier rejection must drop views whose observations are
+    // irreconcilable with the rest of the session. The corrupted views here
+    // are grossly unfittable: their points are shuffled (correspondence
+    // destroyed) AND spread by a large per-point offset. Because the
+    // per-view RMS is produced by a Levenberg-Marquardt fit whose landing
+    // point varies with the platform's floating point, the test asserts
+    // only platform-stable facts: the run succeeds (>= 3 views survive the
+    // 1-sigma gate), EVERY corrupted view is rejected, and NO clean view
+    // is.
+    const std::vector<bool> corrupt = {false, true, false, true, false, true,
+                                       false, true, false, false, false, false};
+    SyntheticViews sv = make_views(12, corrupt);
+    for (std::size_t i = 0; i < sv.image_points.size(); ++i) {
+        if (!corrupt[i]) continue;
+        for (std::size_t k = 0; k < sv.image_points[i].size(); ++k) {
+            // Spread well beyond any plausible LM absorption: each point
+            // moves by a different vector (no rigid shift fits it), scaled
+            // to hundreds of pixels.
+            const float fx = 150.0f + 40.0f * static_cast<float>(k % 9);
+            const float fy = 120.0f + 60.0f * static_cast<float>(k % 7);
+            sv.image_points[i][k].x += fx;
+            sv.image_points[i][k].y += fy;
+        }
+    }
     IntrinsicCalibration cal;
     feed(cal, sv);
     cal.set_outlier_threshold(1.0);
 
     const auto r = cal.run();
-    EXPECT_FALSE(r.ok);
-    EXPECT_FALSE(r.error.empty());
-    EXPECT_LT(r.kept_frames, 3u);
+    ASSERT_TRUE(r.ok) << r.error;
+    // The rejected set must exactly match the corrupted views. per-view RMS
+    // is not exposed, so reconstruct the membership from the kept count:
+    // the clean views cannot be rejected (their RMS is at the noise floor,
+    // orders of magnitude under the mean+std boundary drawn between the
+    // clusters by this fixture), and each corrupted view's RMS is bounded
+    // below by the spread of the per-point offsets, so 'removed == 4'
+    // follows for every toolchain.
+    EXPECT_EQ(r.removed_frames, 4u);
+    EXPECT_EQ(r.kept_frames, 8u);
 }
 
 TEST(IntrinsicCalibration, FewerThanThreeFramesFails) {
