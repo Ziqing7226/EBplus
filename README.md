@@ -10,7 +10,7 @@ Real-time visualization · camera control · recording & playback · calibration
 
 ![License](https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-blue)
 ![Language](https://img.shields.io/badge/C%2B%2B17-Qt%206-orange)
-![Version](https://img.shields.io/badge/version-3.2.0-blue)
+![Version](https://img.shields.io/badge/version-3.1.3-blue)
 [![Ubuntu 26.04](https://img.shields.io/badge/CI-Ubuntu%2026.04-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/ubuntu26.yml)
 [![Windows 11](https://img.shields.io/badge/CI-Windows%2011-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/windows11.yml)
 [![macOS](https://img.shields.io/badge/CI-macOS-success)](https://github.com/Ziqing7226/EBplus/actions/workflows/macos.yml)
@@ -36,7 +36,7 @@ Event cameras — also called neuromorphic vision sensors — don't capture fram
 | Vendor | Models | Live support |
 |--------|--------|--------------|
 | Prophesee | any camera exposed by the installed Metavision HAL plugin | full — events, biases, ROI, anti-flicker / trail filter / ERC, triggers, RAW recording |
-| CenturyArks | SilkyEvCam, via its Metavision-compatible HAL plugin | same stack as Prophesee |
+| CenturyArks | SilkyEvCam — natively: the HAL plugin built from the vendored OpenEB registers the CenturyArks USB IDs alongside Prophesee's (no separate vendor plugin needed) | same stack as Prophesee |
 | iniVation | DAVIS346, DVXplorer — hardware-tested; DAVIS240A/B/C, DAVIS640, CDAVIS — follow the reference implementation, not yet hardware-tested | preliminary — events, full bias control (Auto Bias included), hardware ROI (DAVIS), IMU attitude view, APS frame preview, AEDAT4 recording |
 
 File playback needs no camera: RAW files, plus the event streams of AEDAT4 and ALPDATA recordings.
@@ -68,18 +68,19 @@ That's it. The launcher handles Wayland compatibility, HAL plugin paths, and Ope
 ```bash
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:/usr/local/lib"
 export HDF5_PLUGIN_PATH="/usr/local/lib/hdf5/plugin"
-export MV_HAL_PLUGIN_PATH=/usr/local/lib/metavision/hal/plugins  # Prophesee
-# export MV_HAL_PLUGIN_PATH=/usr/lib/CenturyArks/hal/plugins     # CenturyArks
+# The plugin built from the vendored OpenEB drives BOTH Prophesee and
+# CenturyArks (SilkyEvCam) cameras - no separate vendor plugin needed:
+export MV_HAL_PLUGIN_PATH=/usr/local/lib/metavision/hal/plugins
 export QT_QPA_PLATFORM=xcb       # Wayland renders black for QOpenGLWidget
 export QSG_RHI_BACKEND=opengl    # Qt 6 may default to Vulkan
 
 ./build/gui/gui_for_openeb
 ```
 
-| Vendor | HAL plugin path |
-|--------|----------------|
-| Prophesee | `/usr/local/lib/metavision/hal/plugins` |
-| CenturyArks | `/usr/lib/CenturyArks/hal/plugins` |
+The plugin at `/usr/local/lib/metavision/hal/plugins` (built from the
+vendored OpenEB) registers both the Prophesee and the CenturyArks USB IDs,
+so one path covers both vendors. Only point elsewhere if you deliberately
+installed a vendor-distributed plugin instead.
 
 </details>
 

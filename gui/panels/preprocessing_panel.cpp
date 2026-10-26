@@ -105,12 +105,13 @@ void PreprocessingPanel::on_camera_connected(CameraController* controller) {
 }
 
 void PreprocessingPanel::on_camera_disconnected() {
-    // Disable every stage in the FilterChain BEFORE nullifying camera_.
-    // CameraController is a long-lived MainWindow member (not destroyed on
-    // disconnect) and CameraController::teardown() does not reset filter_chain_,
-    // so previously-enabled stages would keep filtering events from the next
-    // camera with no UI indication. apply_stage() early-returns once
-    // camera_ is null, so we must drive the chain directly here.
+    // Disable every stage in the FilterChain BEFORE nullifying camera_
+    // (the chain would otherwise keep filtering the next camera's stream
+    // with no UI indication), but KEEP the checkboxes: the user's display
+    // transforms (flip X/Y, polarity filter) are a panel-level preference,
+    // and on_camera_connected() replays every still-checked stage onto the
+    // new camera's fresh FilterChain. Clearing the checkboxes here used to
+    // make flip X / flip Y silently reset on every camera switch.
     if (camera_) {
         auto* chain = camera_->filter_chain();
         for (auto it = enables_.constBegin(); it != enables_.constEnd(); ++it) {
@@ -119,11 +120,6 @@ void PreprocessingPanel::on_camera_disconnected() {
     }
     camera_ = nullptr;
     setEnabled(false);
-    for (auto* cb : enables_) {
-        cb->blockSignals(true);
-        cb->setChecked(false);
-        cb->blockSignals(false);
-    }
 }
 
 void PreprocessingPanel::set_stage_enabled(const QString& stage, bool on) {

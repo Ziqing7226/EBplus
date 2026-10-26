@@ -27,7 +27,7 @@
 
 using namespace Metavision;
 
-void Metavision::raise_error(const std::string &str) {
+[[noreturn]] void Metavision::raise_error(const std::string &str) {
     throw std::runtime_error(str + " (" + std::to_string(errno) + " - " + std::strerror(errno) + ")");
 }
 

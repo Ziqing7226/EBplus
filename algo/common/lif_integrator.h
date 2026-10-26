@@ -36,7 +36,8 @@ public:
     /// @param threshold Firing threshold. Crossing it emits a spike + reset.
     /// @param reset_value Potential applied after a spike when
     ///        jump_after_firing_percent == 0 (legacy full-reset mode).
-    /// @param decay_step_us Discrete leak granularity (unused, kept for ABI).
+    /// @param decay_step_us Discrete leak granularity (unused; the value is
+    /// accepted for call-site compatibility but not stored).
     /// @param initial_potential_percent Initial MP as a percent of threshold
     ///        (jAER MPInitialPercnetTh，但有意修正其漏除 100 的上游 bug，
     ///        见头注释). 0 → start at reset_value (legacy).
@@ -48,12 +49,11 @@ public:
                   Metavision::timestamp tau_us = 10000,
                   double threshold = 1.0,
                   double reset_value = 0.0,
-                  Metavision::timestamp decay_step_us = 1000,
+                  Metavision::timestamp /*decay_step_us (unused)*/ = 1000,
                   double initial_potential_percent = 0.0,
                   double jump_after_firing_percent = 0.0)
         : width_(width), height_(height), tau_us_(tau_us),
           threshold_(threshold), reset_value_(reset_value),
-          decay_step_us_(decay_step_us),
           initial_potential_percent_(initial_potential_percent),
           jump_after_firing_percent_(jump_after_firing_percent),
           initial_potential_(compute_initial_potential()),
@@ -188,7 +188,6 @@ private:
     Metavision::timestamp tau_us_;
     double threshold_;
     double reset_value_;
-    Metavision::timestamp decay_step_us_;
     double initial_potential_percent_;
     double jump_after_firing_percent_;
     double initial_potential_;

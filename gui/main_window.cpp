@@ -955,6 +955,12 @@ void MainWindow::wire_signals() {
         roi_draw_pending_ = false;
         on_toggle_roi_drag(false);
         display_->clear();
+        // Algorithm-ROI automation is session-scoped: a saved rect from the
+        // previous camera would be restored onto the NEXT one when that
+        // algorithm is closed there (the values were captured with the old
+        // sensor's geometry).
+        roi_automation_save_.reset();
+        e2v_downsample_save_.reset();
         if (auto* pb = findChild<QDockWidget*>("PlaybackDock")) {
             pb->setVisible(false);
         }

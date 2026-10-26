@@ -356,7 +356,8 @@ RegisterMap::Field *RegisterMap::Register::bit_to_field(uint32_t bit) {
     for (auto &it : name_to_field_) {
         auto name   = it.first;
         auto &field = it.second;
-        if (field.get_start() <= bit && bit < field.get_start() + field.get_len()) {
+        const auto start = static_cast<uint32_t>(field.get_start());
+        if (start <= bit && bit < start + field.get_len()) {
             return &field;
         }
     }

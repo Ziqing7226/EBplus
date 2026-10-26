@@ -228,7 +228,8 @@ private:
                 validator.validate_time_high(last_timestamp_.bitfield_time.high, ev_timehigh->time);
 
                 last_timestamp_.bitfield_time.loop +=
-                    (bool)(last_timestamp_.bitfield_time.high >= max_timestamp_ + ev_timehigh->time);
+                    (bool)(static_cast<timestamp>(last_timestamp_.bitfield_time.high) >=
+                            max_timestamp_ + static_cast<timestamp>(ev_timehigh->time));
                 last_timestamp_.bitfield_time.low =
                     (last_timestamp_.bitfield_time.high == ev_timehigh->time ?
                          last_timestamp_.bitfield_time.low :

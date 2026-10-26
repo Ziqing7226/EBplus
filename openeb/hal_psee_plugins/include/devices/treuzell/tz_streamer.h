@@ -28,14 +28,14 @@ public:
     static std::shared_ptr<TzDevice> build(std::shared_ptr<TzLibUSBBoardCommand> cmd, uint32_t dev_id,
                                            std::shared_ptr<TzDevice> parent);
 
-    virtual void start();
-    virtual void stop();
+    virtual void start() override;
+    virtual void stop() override;
     virtual std::list<StreamFormat> get_supported_formats() const override;
     StreamFormat set_output_format(const std::string &format_name) override;
     StreamFormat get_output_format() const override;
 
 protected:
-    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config);
+    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config) override;
 };
 
 } // namespace Metavision

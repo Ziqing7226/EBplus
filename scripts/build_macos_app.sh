@@ -464,17 +464,13 @@ OPENEB_PREFIX_PATH="$(cmake_prefix_path \
     "$ABSEIL_PREFIX")"
 
 log "Configuring vendored OpenEB"
-# -Wno-inconsistent-missing-override: the vendored OpenEB's own plugin
-# headers (tz_psee_video.h, genx320_roi_interface.h, ...) are not marked
-# 'override'; upstream sources are not patched here, the warning is only
-# suppressed for this vendored build. CXXFLAGS is exported as an
-# environment variable on purpose: CMake APPENDS it to the platform
-# defaults instead of replacing them (the -DCMAKE_CXX_FLAGS form lost
-# MSVC's /EHsc on the Windows runner and broke boost exception linking
-# there). -Wno-deprecated hides the CMP0095 OLD pin notice;
-# -Wno-policy silences the boost policy notice without changing
-# resolution. Scoped to the OpenEB configure only.
-CXXFLAGS=-Wno-inconsistent-missing-override cmake -Wno-policy -Wno-deprecated -S "$REPO_ROOT/openeb" -B "$OPENEB_BUILD_DIR" \
+# The vendored OpenEB's own AppleClang warnings are fixed in the sources
+# themselves (missing 'override' spelled out in tz_psee_video.h and
+# genx320_roi_interface.h) — no compiler suppression flags. -Wno-deprecated /
+# -Wno-policy only hide cmake's own notices for the CMP0095 OLD pin and the
+# boost wrapper (changing those would alter install RPATH / resolution
+# semantics).
+cmake -Wno-policy -Wno-deprecated -S "$REPO_ROOT/openeb" -B "$OPENEB_BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
     -DCMAKE_INSTALL_PREFIX="$OPENEB_INSTALL_PREFIX" \

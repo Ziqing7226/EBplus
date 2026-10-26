@@ -711,7 +711,11 @@ std::ostream &save_device(const Device &d, std::ostream &os) {
     options.preserve_proto_field_names    = true;
 
     std::string json;
-    google::protobuf::util::MessageToJsonString(state, &json, options);
+    auto serialize_status = google::protobuf::util::MessageToJsonString(state, &json, options);
+    if (!serialize_status.ok()) {
+        throw CameraException(CameraErrorCode::InvalidArgument,
+                              "Failed to serialize camera settings: " + serialize_status.ToString());
+    }
     os << json;
 
     return os;

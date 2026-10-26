@@ -45,6 +45,10 @@ private:
     class AsyncTransfer;
     std::vector<AsyncTransfer> vtransfer_;
     uint32_t timeout_cnt_;
+    /// Consecutive non-timeout USB transfer errors in run_transfers(); a
+    /// bounded number is requeued (transient bus glitches used to tear down
+    /// the whole stream), reset by any completed transfer.
+    uint32_t error_retry_cnt_{0};
 
     static const size_t packet_size_;
     static const size_t async_transfer_num_;

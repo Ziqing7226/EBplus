@@ -4,10 +4,6 @@ rem
 rem Copy this script to run.local.bat and customise the env vars for your
 rem camera hardware. The run.local.bat copy is git-ignored so you can keep
 rem your private HAL plugin path there.
-rem
-rem Common HAL plugin paths:
-rem   Prophesee (default openEB install): C:\Program Files\Prophesee\lib\metavision\hal\plugins
-rem   EBplus zip deployment:              <install dir>\metavision\hal\plugins
 
 setlocal
 
@@ -21,9 +17,15 @@ if not exist "%BIN%" (
     exit /b 1
 )
 
-rem ---- OpenEB runtime environment (customise for your camera) ----
-if "%MV_HAL_PLUGIN_PATH%"=="" set "MV_HAL_PLUGIN_PATH=C:\Program Files\Prophesee\lib\metavision\hal\plugins"
-if "%HDF5_PLUGIN_PATH%"=="" set "HDF5_PLUGIN_PATH=C:\Program Files\Prophesee\share\hdf5\plugin"
+rem ---- OpenEB runtime environment ----
+rem The vendored OpenEB build output IS the runtime: point the HAL plugin
+rem and HDF5 ECF paths at it by default (no system-wide Prophesee install
+rem required) and put its DLL directory on PATH so metavision_sdk_*.dll /
+rem hdf5*.dll resolve. Override both in run.local.bat if you deliberately
+rem use a system-wide Prophesee installation.
+if "%MV_HAL_PLUGIN_PATH%"=="" set "MV_HAL_PLUGIN_PATH=%SCRIPT_DIR%build\openeb-install\lib\metavision\hal\plugins"
+if "%HDF5_PLUGIN_PATH%"=="" set "HDF5_PLUGIN_PATH=%SCRIPT_DIR%build\openeb-install\lib\hdf5\plugin"
+set "PATH=%SCRIPT_DIR%build\openeb-install\bin;%PATH%"
 
 rem ---- Qt platform plugin + RHI backend ----
 rem Qt 6 may default to the direct3d RHI backend and produce a black viewport

@@ -176,6 +176,28 @@ public:
         if (!i_events_stream_decoder_) {
             return -1;
         }
+        // The reader's own device is already building its seek index in the
+        // background (device_discovery spawns it at open time). Its seek
+        // range end IS the file duration, so wait for that index instead of
+        // opening a second Camera and having it build the same index again
+        // (two full decodes of the file racing on every duration query).
+        // Only when this device has no index building at all - the stream
+        // was opened with indexing disabled - fall back to opening a
+        // dedicated Camera (historical path, unchanged).
+        if (i_events_stream_) {
+            timestamp range_start = -1, range_end = -1;
+            auto status           = i_events_stream_->get_seek_range(range_start, range_end);
+            if (status == I_EventsStream::IndexStatus::Building) {
+                do {
+                    std::this_thread::yield();
+                    status = i_events_stream_->get_seek_range(range_start, range_end);
+                } while (status == I_EventsStream::IndexStatus::Building);
+            }
+            if (status == I_EventsStream::IndexStatus::Good) {
+                return range_end;
+            }
+        }
+
         timestamp duration    = -1;
         FileConfigHints hints = FileConfigHints().real_time_playback(false);
         Camera cam            = Camera::from_file(reader_.get_path(), hints);

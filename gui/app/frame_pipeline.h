@@ -93,6 +93,12 @@ public:
 
     /// @brief Clears the file conditioner's temporal state (seek/loop).
     void reset_file_conditioner() { file_generator_.reset_conditioner(); }
+    /// Per-source reset (teardown): clears the file conditioner state and
+    /// any display ROI left over from the previous source.
+    void reset_file_session_state() {
+        file_generator_.reset_conditioner();
+        set_display_roi_origin(false, 0, 0);
+    }
 
     /// @brief Forwards the per-window algorithm feed hook to the file
     /// generator (P6-A file-mode write-back): the callback is invoked inside

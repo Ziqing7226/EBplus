@@ -23,18 +23,18 @@ class TzPseeVideo : public TzPseeFpgaDevice, public TzMainDevice {
 public:
     TzPseeVideo(std::shared_ptr<TzLibUSBBoardCommand> cmd, uint32_t dev_id, std::shared_ptr<TzDevice> parent);
     virtual ~TzPseeVideo();
-    virtual void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config);
+    void spawn_facilities(DeviceBuilder &device_builder, const DeviceConfig &device_config) override;
     static std::shared_ptr<TzDevice> build(std::shared_ptr<TzLibUSBBoardCommand> cmd, uint32_t dev_id,
                                            std::shared_ptr<TzDevice> parent);
 
     virtual std::list<StreamFormat> get_supported_formats() const override;
     StreamFormat get_output_format() const override;
-    virtual long get_system_id() const;
-    virtual bool set_mode_standalone();
-    virtual bool set_mode_master();
-    virtual bool set_mode_slave();
-    virtual I_CameraSynchronization::SyncMode get_mode() const;
-    virtual I_HW_Identification::SensorInfo get_sensor_info() {
+    long get_system_id() const override;
+    bool set_mode_standalone() override;
+    bool set_mode_master() override;
+    bool set_mode_slave() override;
+    I_CameraSynchronization::SyncMode get_mode() const override;
+    virtual I_HW_Identification::SensorInfo get_sensor_info() override {
         return {0, 0, "Gen0.0"};
     }
 };

@@ -1194,8 +1194,9 @@ public:
         stripes_count = std::min(stripes_count, max_stripes);
 
 #else
-        if (nstripes > 1)
+        if (nstripes > 1) {
             CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/MJPEG: parallel processing is disabled: https://github.com/opencv/opencv/issues/19634");
+        }
         stripes_count = 1;
 #endif
 

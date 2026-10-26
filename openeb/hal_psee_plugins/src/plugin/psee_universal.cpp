@@ -41,6 +41,13 @@ PluginDiscovery register_treuzell([](Plugin &plugin) {
     tz_cam_discovery->add_usb_id(0x04b4, 0x00f4, 0x19);
     tz_cam_discovery->add_usb_id(0x04b4, 0x00f5, 0x19);
     tz_cam_discovery->add_usb_id(0x1FC9, 0x5838, 0x19);
+    // CenturyArks event cameras (SilkyEvCam family) speak the same Treuzell
+    // protocol on the same psee_hw_layer device stack; registering their
+    // USB IDs here lets this single stock plugin drive both vendors, so a
+    // build without any vendor-specific plugin overlay still detects them.
+    tz_cam_discovery->add_usb_id(0x31f7, 0x2, 0x19);
+    tz_cam_discovery->add_usb_id(0x31f7, 0x3, 0x19);
+    tz_cam_discovery->add_usb_id(0x31f7, 0x4, 0x19);
 
     // Register live camera discoveries
     auto &fx3_disc = plugin.add_camera_discovery(std::make_unique<Fx3CameraDiscovery>());
