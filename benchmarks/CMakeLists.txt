@@ -44,3 +44,10 @@ target_compile_options(bench_backends PRIVATE ${BENCH_COMPILE_OPTIONS})
 add_executable(bench_index bench_index.cpp)
 target_link_libraries(bench_index PRIVATE gui_algo)
 target_compile_options(bench_index PRIVATE ${BENCH_COMPILE_OPTIONS})
+
+# Live camera enumeration + streaming probe (SDK level). The live-camera
+# counterpart of bench_playback: a failure here isolates driver/plugin
+# issues from UI issues.
+add_executable(bench_camera bench_camera.cpp)
+target_link_libraries(bench_camera PRIVATE gui_algo)
+target_compile_options(bench_camera PRIVATE ${BENCH_COMPILE_OPTIONS})
