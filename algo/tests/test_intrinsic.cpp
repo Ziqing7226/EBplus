@@ -203,13 +203,20 @@ TEST(IntrinsicCalibration, NegativeOutlierThresholdKeepsAll) {
 }
 
 TEST(IntrinsicCalibration, TooFewViewsAfterRejectionFails) {
-    // 6 views, 4 of them heavily corrupted; an aggressive outlier threshold
-    // (0.1σ) rejects them → only 2 survive → run() errors.
+    // 6 views, 4 of them heavily corrupted; the shuffled correspondences are
+    // unfittable, so the corrupted views' per-view RMS stays an order of
+    // magnitude above the clean ones. A 1-sigma threshold (mean + 1std sits
+    // far below the corrupted RMS and above the clean RMS for this spread)
+    // rejects exactly the 4 corrupted views -> only 2 survive -> run()
+    // errors. (A 0.1-sigma threshold used here earlier put the boundary
+    // INSIDE the clean cluster: whether a clean view crosses mean+0.1std
+    // depended on LM-iteration floating-point dust, which made the test
+    // flaky on some CI machines.)
     const std::vector<bool> corrupt = {false, true, true, true, true, false};
     SyntheticViews sv = make_views(6, corrupt);
     IntrinsicCalibration cal;
     feed(cal, sv);
-    cal.set_outlier_threshold(0.1);
+    cal.set_outlier_threshold(1.0);
 
     const auto r = cal.run();
     EXPECT_FALSE(r.ok);
