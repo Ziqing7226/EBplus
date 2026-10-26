@@ -61,7 +61,11 @@ public:
         algo_.learn(ev, n);
         last_kept_ = algo_.process(ev, n);
         // Expose the compacted events from whichever buffer they now live
-        // in — no copy-back round trip.
+        // in — no copy-back round trip. NOTE: this relies on
+        // roi_.apply()/Preprocessor either writing in place into buf_ or
+        // into roi_buf_ — Preprocessor::apply's internal buffer is only
+        // returned when halve_coords_ is set, which this backend never
+        // does. If that ever changes, the span must be re-pointed.
         if (ev_c != as_events(buf_.data())) {
             span_ptr_ = reinterpret_cast<const Metavision::EventCD*>(roi_buf_.data());
         } else {

@@ -155,6 +155,7 @@ PseeLibUSBDataTransfer::~PseeLibUSBDataTransfer() {
 }
 
 void PseeLibUSBDataTransfer::start_impl() {
+    error_retry_cnt_ = 0; // a fresh streaming session gets a fresh budget
     // Drop existing URB on device side
     if (auto r = dev_->clear_halt(bEpCommAddress_); r < 0) {
         throw HalConnectionException(r, libusb_error_category());

@@ -825,6 +825,12 @@ void I_EventsStream::index(std::unique_ptr<Device> device_for_indexing) {
             MV_HAL_LOG_WARNING() << "Unhandled error while building index:";
             MV_HAL_LOG_WARNING() << e.what();
             MV_HAL_LOG_WARNING() << "Seek feature might not work properly.";
+            // Park the status on Bad: it was set to Building before the
+            // thread started, and only a successful swap updates it.
+            // Callers polling get_seek_range / get_duration (which now
+            // waits for the index) would otherwise spin forever.
+            std::lock_guard<std::mutex> lock(index_safety_);
+            index_.status_ = I_EventsStream::IndexStatus::Bad;
         }
     });
 

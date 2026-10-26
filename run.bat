@@ -1,9 +1,11 @@
 @echo off
 rem run.bat — launcher for EBplus on Windows.
 rem
-rem Copy this script to run.local.bat and customise the env vars for your
-rem camera hardware. The run.local.bat copy is git-ignored so you can keep
-rem your private HAL plugin path there.
+rem Customisation: copy this script to run.local.bat (git-ignored) and edit
+rem the env vars there. NOTE for 3.2.0: the defaults now point at the
+rem vendored build and this script puts build\openeb-installin on PATH -
+rem re-copy run.local.bat from the current run.bat if yours predates it (an
+rem old full copy would miss the PATH setup and the new plugin/HDF5 paths).
 
 setlocal
 
