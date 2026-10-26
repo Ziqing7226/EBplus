@@ -10,7 +10,8 @@ EB plus gives you a complete desktop workflow for event-camera data: real-time v
 
 | Page | What's inside |
 |------|---------------|
-| [Getting Started](Getting-Started.md) | Build, run, environment variables, troubleshooting |
+| [Getting Started](Getting-Started.md) | Build, run, environment variables |
+| [Troubleshooting](troubleshooting.md) | Camera drivers (WinUSB/HVCI), plugin paths, HDF5 ECF, DL model deployment (E2VID/FireNet ONNX + ONNX Runtime/OpenVINO) |
 | [GUI Guide](GUI-Guide.md) | VSCode-style sidebar, panels, display modes, theming, shortcuts |
 | [Algorithms](Algorithms.md) | Algorithm registry, categories, E2VID, preprocessing, noise filter |
 | [Architecture](Architecture.md) | Directory layout, AlgoBridge, data flow, extension points |
