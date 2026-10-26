@@ -1508,6 +1508,21 @@ void CameraController::teardown() {
 
     sensor_info_ = SensorInfo{};
     is_file_ = false;
+
+    // 3. Reset the per-source session state. The unified ROI rect in
+    //    particular must NOT survive a disconnect: it was sized for the
+    //    previous sensor, so reconnecting a DIFFERENT camera re-applied the
+    //    old rectangle instead of centering a default one
+    //    (validate_roi_after_connect only salvages overlap). Same-camera
+    //    reconnection loses the crop too — acceptable: the RoiPanel
+    //    checkbox is already unchecked by the disconnect handler, so the
+    //    stale state was invisible to the user anyway.
+    roi_enabled_ = false;
+    roi_roni_ = false;
+    roi_x0_ = roi_y0_ = roi_x1_ = roi_y1_ = 0;
+    conditioner_.reset_session_state();
+    frame_pipeline_.reset_file_session_state();
+    emit roi_state_changed(false, 0, 0, 0, 0);
 }
 
 void CameraController::fetch_sensor_info() {

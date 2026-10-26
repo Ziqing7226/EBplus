@@ -91,6 +91,13 @@ public:
     /// source restart). Geometry-dependent state (LUT) is kept.
     void reset_temporal();
 
+    /// @brief Resets every per-source conditioning decision taken through
+    /// set_param / set_roi (noise filter + params, 1/4 thin, undistort,
+    /// ROI rect). Called by CameraController::teardown() so a newly
+    /// connected camera starts from defaults instead of inheriting the
+    /// previous camera's settings. GUI thread only.
+    void reset_session_state();
+
     /// @brief True when any stage (ROI / chain / filter / thin / undistort)
     /// would modify the stream.
     bool active() const;

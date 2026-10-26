@@ -156,6 +156,28 @@ void StreamConditioner::reset_temporal() {
     if (filter_) filter_->reset();
 }
 
+void StreamConditioner::reset_session_state() {
+    std::lock_guard<std::mutex> lk(mutex_);
+    // Drop every per-source decision: ROI rect, noise filter (+ its params),
+    // 1/4 thin, undistort. Geometry-only FilterChain stages (flip /
+    // polarity) are deliberately NOT touched here — their checkbox state
+    // lives in the PreprocessingPanel, which owns the enable/replay cycle
+    // across disconnects.
+    roi_enabled_ = false;
+    roi_roni_ = false;
+    roi_x0_ = roi_y0_ = roi_x1_ = roi_y1_ = 0;
+    filter_enabled_ = false;
+    filter_params_.clear();
+    downsample_enabled_ = false;
+    undistort_enabled_ = false;
+    undistort_path_.clear();
+    undistort_lut_valid_ = false;
+    undistort_lut_failed_ = false;
+    undistort_K_.release();
+    rebuild_filter_locked(sensor_w_, sensor_h_);
+    push_geometry_locked();
+}
+
 bool StreamConditioner::active() const {
     std::lock_guard<std::mutex> lk(mutex_);
     if (roi_enabled_) return true;
