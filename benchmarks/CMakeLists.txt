@@ -57,3 +57,10 @@ target_compile_options(bench_camera PRIVATE ${BENCH_COMPILE_OPTIONS})
 add_executable(bench_flip bench_flip.cpp)
 target_link_libraries(bench_flip PRIVATE gui_core)
 target_compile_options(bench_flip PRIVATE ${BENCH_COMPILE_OPTIONS})
+
+# Reproduces the GUI's own file-open path (CameraController::connect_file,
+# external-source routing included) outside the UI. Run it with the same
+# environment as the GUI to prove/disprove "file won't open".
+add_executable(bench_guiopen bench_guiopen.cpp)
+target_link_libraries(bench_guiopen PRIVATE gui_core)
+target_compile_options(bench_guiopen PRIVATE ${BENCH_COMPILE_OPTIONS})
