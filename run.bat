@@ -29,11 +29,14 @@ if "%MV_HAL_PLUGIN_PATH%"=="" set "MV_HAL_PLUGIN_PATH=%SCRIPT_DIR%build\openeb-i
 if "%HDF5_PLUGIN_PATH%"=="" set "HDF5_PLUGIN_PATH=%SCRIPT_DIR%build\openeb-install\lib\hdf5\plugin"
 set "PATH=%SCRIPT_DIR%build\openeb-install\bin;%PATH%"
 
-rem ---- Qt DLLs from the local deps layout (if present) ----
-rem Lets a double-clicked exe resolve Qt6*.dll without a system-wide Qt.
+rem ---- Qt DLLs: search the common install layouts ----
+rem Local deps layout, aqtinstall default (%LOCALAPPDATA%\Qt), and C:\Qt.
+rem First match wins; a system-wide Qt already on PATH also just works.
 if exist "%SCRIPT_DIR%..\deps\Qt" (
     for /d %%D in ("%SCRIPT_DIR%..\deps\Qt\6.*") do if exist "%%D\msvc2022_64\bin" set "PATH=%%D\msvc2022_64\bin;%PATH%"
 )
+for /d %%D in ("%LOCALAPPDATA%\Qt\6.*") do if exist "%%D\msvc2022_64\bin" set "PATH=%%D\msvc2022_64\bin;%PATH%"
+for /d %%D in ("C:\Qt\6.*") do if exist "%%D\msvc2022_64\bin" set "PATH=%%D\msvc2022_64\bin;%PATH%"
 
 rem ---- Qt platform plugin + RHI backend ----
 rem Qt 6 may default to the direct3d RHI backend and produce a black viewport
