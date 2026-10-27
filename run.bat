@@ -1,17 +1,17 @@
 @echo off
-rem run.bat — launcher for EBplus on Windows.
+rem run.bat - launcher for EBplus on Windows.
 rem
 rem Customisation: copy this script to run.local.bat (git-ignored) and edit
-rem the env vars there. NOTE for 3.2.0: the defaults now point at the
-rem vendored build and this script puts build\openeb-installin on PATH -
-rem re-copy run.local.bat from the current run.bat if yours predates it (an
-rem old full copy would miss the PATH setup and the new plugin/HDF5 paths).
+rem the env vars there. NOTE for 3.2.0: the defaults point at the vendored
+rem build and this script puts build\openeb-install\bin on PATH - re-copy
+rem run.local.bat from the current run.bat if yours predates it.
 
 setlocal
 
-rem ---- resolve repo root + binary ----
+rem ---- resolve repo root + binary (single- and multi-config layouts) ----
 set "SCRIPT_DIR=%~dp0"
 set "BIN=%SCRIPT_DIR%build\gui\gui_for_openeb.exe"
+if not exist "%BIN%" set "BIN=%SCRIPT_DIR%build\gui\Release\gui_for_openeb.exe"
 
 if not exist "%BIN%" (
     echo [run.bat] Binary not found at: %BIN% >&2
@@ -29,12 +29,16 @@ if "%MV_HAL_PLUGIN_PATH%"=="" set "MV_HAL_PLUGIN_PATH=%SCRIPT_DIR%build\openeb-i
 if "%HDF5_PLUGIN_PATH%"=="" set "HDF5_PLUGIN_PATH=%SCRIPT_DIR%build\openeb-install\lib\hdf5\plugin"
 set "PATH=%SCRIPT_DIR%build\openeb-install\bin;%PATH%"
 
+rem ---- Qt DLLs from the local deps layout (if present) ----
+rem Lets a double-clicked exe resolve Qt6*.dll without a system-wide Qt.
+if exist "%SCRIPT_DIR%..\deps\Qt" (
+    for /d %%D in ("%SCRIPT_DIR%..\deps\Qt\6.*") do if exist "%%D\msvc2022_64\bin" set "PATH=%%D\msvc2022_64\bin;%PATH%"
+)
+
 rem ---- Qt platform plugin + RHI backend ----
 rem Qt 6 may default to the direct3d RHI backend and produce a black viewport
 rem on some GPUs; force OpenGL (mirrors main.cpp / run.sh behaviour).
 if "%QSG_RHI_BACKEND%"=="" set "QSG_RHI_BACKEND=opengl"
 
-rem Qt DLLs may live in a vcpkg / aqtinstall layout — let the user prepend
-rem extra PATH entries in run.local.bat before this line.
 "%BIN%" %*
 endlocal
