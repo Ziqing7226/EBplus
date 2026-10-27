@@ -30,6 +30,38 @@ void open_one(const std::string& f) {
     std::printf("open [%d]: %s\n", g_index, f.c_str());
     const bool ok = g_controller->connect_file(f);
     std::printf("  connect_file => %s\n", ok ? "OK" : "FAILED");
+    if (ok) {
+        // Mirror what the GUI does synchronously inside its connected()
+        // handler: populate the facility panels and query source
+        // capabilities. Every facility getter must return nullptr for an
+        // offline source instead of throwing
+        // CameraException(DeviceUnavailable) — a throw here propagates back
+        // through the direct-connected signal into connect_file() and fails
+        // the whole open (the HDF5 GUI regression this probe used to miss).
+        int fac_fails = 0;
+        auto try_get = [&](const char* name, auto&& fn) {
+            try {
+                void* p = static_cast<void*>(fn());
+                std::printf("  facility %-14s => %s\n", name, p ? "non-null" : "nullptr");
+            } catch (const std::exception& e) {
+                std::printf("  facility %-14s => THREW: %s\n", name, e.what());
+                ++fac_fails;
+            }
+        };
+        try_get("biases", [] { return g_controller->biases_facility(); });
+        try_get("roi", [] { return g_controller->roi_facility(); });
+        try_get("anti_flicker", [] { return g_controller->anti_flicker_facility(); });
+        try_get("trail_filter", [] { return g_controller->trail_filter_facility(); });
+        try_get("erc", [] { return g_controller->erc_facility(); });
+        try_get("trigger_in", [] { return g_controller->trigger_in_facility(); });
+        try_get("trigger_out", [] { return g_controller->trigger_out_facility(); });
+        try_get("camera_sync", [] { return g_controller->camera_sync_facility(); });
+        const auto caps = g_controller->source_capabilities();
+        std::printf("  capabilities: imu=%d aps=%d trigger=%d esp=%d\n",
+                    caps.imu ? 1 : 0, caps.aps ? 1 : 0,
+                    caps.trigger ? 1 : 0, caps.esp ? 1 : 0);
+        g_fails += fac_fails;
+    }
     if (!ok) ++g_fails;
     ++g_index;
     QTimer::singleShot(0, QCoreApplication::instance(), [] { open_next(); });
