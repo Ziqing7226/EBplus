@@ -45,24 +45,29 @@ Options, in order of preference:
    information"), and a self-signed catalog additionally requires the
    certificate in `LocalMachine\TrustedPublisher` **and** `LocalMachine\Root`.
 
-### 1.2 Memory Integrity (HVCI) blocks self-signed driver packages
+### 1.2 The binding still fails even with the package staged
 
-If the machine runs **Memory Integrity** (Windows Security → Device security
-→ Core isolation; verify with
-`Get-CimInstance Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard | Select SecurityServicesRunning`
-— `2` in the list means HVCI is active), then **every self-signed driver
-package is rejected with `CERT_E_UNTRUSTEDROOT` no matter which stores the
-certificate is imported into** — including Zadig- and libwdi-installed
-packages (`wdi-simple.exe` shipped in older CenturyArks installers). This is
-a documented HVCI policy, not a defect of the tool.
+Real-world case (3.2.0 bring-up): the driver package was staged
+successfully (`pnputil /add-driver` accepted it, `oemNNN.inf` published)
+while the device kept reporting `CM_PROB_FAILED_INSTALL`, and
+`UpdateDriverForPlugAndPlayDevices` returned "no more items". The
+`setupapi.dev.log` (`C:\Windows\INF\setupapi.dev.log`) showed
+`{Select Best Driver}` failing with `0xE0000228 (There are no compatible
+drivers for this device)` on a Build Driver List that yielded **zero
+candidates** despite identical hardware IDs.
 
-- Cleanest fix: install a **vendor driver signed with a real certificate**
-  (see 1.1 option 1).
-- Pragmatic fix: turn Memory Integrity **off** and reboot, install the
-  binding (Zadig / package), optionally turn it back on — the binding
-  survives, but the self-signed package then fails validation again while
-  HVCI is on. Keeping it off is required for self-signed bindings.
-- Security trade-off is real: evaluate before changing.
+Root cause of that case: the INF had been generated with **Unix (LF) line
+endings**. Converting the INF to CRLF, rebuilding the catalog
+(`makecat`), re-signing it and re-importing fixed the match. Lesson: the
+Windows INF parser silently yields an empty model list for LF-only files
+in decorated sections - always ship INFs with CRLF.
+
+Note on signature failures during staging: `0x800b0109
+(CERT_E_UNTRUSTEDROOT)` on an INF verify inside the store-import flow
+appears when the package signature is Authenticode-only (self-signed
+certificate); the store import can still succeed while device matching
+stays broken. Read the FULL staged-package verification context in
+`setupapi.dev.log` before concluding anything about signature policy.
 
 ### 1.3 Do NOT install two HAL plugins covering the same cameras
 
