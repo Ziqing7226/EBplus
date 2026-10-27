@@ -617,11 +617,19 @@ facility::Biases* CameraController::biases_facility() {
     if (dvx_biases_) return dvx_biases_.get();
 #endif
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::Biases>();
+    try {
+        return camera_->get_device().get_facility<facility::Biases>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 facility::Roi* CameraController::roi_facility() {
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::Roi>();
+    try {
+        return camera_->get_device().get_facility<facility::Roi>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 
 bool CameraController::set_unified_roi(bool enabled, int x, int y, int w, int h,
@@ -814,23 +822,43 @@ void CameraController::validate_roi_after_connect() {
 }
 facility::AntiFlicker* CameraController::anti_flicker_facility() {
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::AntiFlicker>();
+    try {
+        return camera_->get_device().get_facility<facility::AntiFlicker>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 facility::TrailFilter* CameraController::trail_filter_facility() {
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::TrailFilter>();
+    try {
+        return camera_->get_device().get_facility<facility::TrailFilter>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 facility::Erc* CameraController::erc_facility() {
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::Erc>();
+    try {
+        return camera_->get_device().get_facility<facility::Erc>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 facility::TriggerIn* CameraController::trigger_in_facility() {
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::TriggerIn>();
+    try {
+        return camera_->get_device().get_facility<facility::TriggerIn>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 facility::TriggerOut* CameraController::trigger_out_facility() {
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::TriggerOut>();
+    try {
+        return camera_->get_device().get_facility<facility::TriggerOut>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 
 CameraController::SourceCapabilities CameraController::source_capabilities() {
@@ -1070,7 +1098,11 @@ void CameraController::on_aps_frame(const davis::ApsFrame& frame) {
 }
 facility::CameraSync* CameraController::camera_sync_facility() {
     if (!camera_) return nullptr;
-    return camera_->get_device().get_facility<facility::CameraSync>();
+    try {
+        return camera_->get_device().get_facility<facility::CameraSync>();
+    } catch (const Metavision::CameraException&) {
+        return nullptr;
+    }
 }
 
 void CameraController::set_raw_tap(RawTap tap) {
