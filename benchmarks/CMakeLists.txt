@@ -51,3 +51,9 @@ target_compile_options(bench_index PRIVATE ${BENCH_COMPILE_OPTIONS})
 add_executable(bench_camera bench_camera.cpp)
 target_link_libraries(bench_camera PRIVATE gui_algo)
 target_compile_options(bench_camera PRIVATE ${BENCH_COMPILE_OPTIONS})
+
+# Headless FilterChain flip verification: mirrors the exact
+# set_stage_enabled/process sequence the preprocessing panel drives.
+add_executable(bench_flip bench_flip.cpp)
+target_link_libraries(bench_flip PRIVATE gui_core)
+target_compile_options(bench_flip PRIVATE ${BENCH_COMPILE_OPTIONS})
