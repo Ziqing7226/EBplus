@@ -20,6 +20,12 @@ add_executable(bench_playback bench_playback.cpp)
 target_link_libraries(bench_playback PRIVATE gui_algo)
 target_compile_options(bench_playback PRIVATE ${BENCH_COMPILE_OPTIONS})
 
+# Probe: does an offline Camera resume from its stop position after
+# stop() -> start()? API precondition for bounded-buffer streaming playback.
+add_executable(bench_streampause bench_streampause.cpp)
+target_link_libraries(bench_streampause PRIVATE gui_algo)
+target_compile_options(bench_streampause PRIVATE ${BENCH_COMPILE_OPTIONS})
+
 # Mat -> QImage conversion chain A/B (old cvtColor+copy vs direct write),
 # including a byte-for-byte equality assert.
 add_executable(bench_frame_conv bench_frame_conv.cpp)
