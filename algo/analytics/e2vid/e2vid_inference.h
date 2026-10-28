@@ -28,6 +28,7 @@
 #define GUI_ALGO_ANALYTICS_E2VID_E2VID_INFERENCE_H
 
 #include <algorithm>
+#include <filesystem>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -208,7 +209,15 @@ public:
             session_opts.SetGraphOptimizationLevel(
                 GraphOptimizationLevel::ORT_ENABLE_ALL);
             session_ = std::make_unique<Ort::Session>(
+#ifdef _WIN32
+                // ORTCHAR_T is wchar_t on Windows: the C++ API only accepts
+                // a wide model path here (there is no narrow overload).
+                *env_,
+                std::filesystem::path(model_path).wstring().c_str(),
+                session_opts);
+#else
                 *env_, model_path.c_str(), session_opts);
+#endif
             sync_num_bins_from_model();
             // Cache MemoryInfo (constant for the session lifetime).
             mem_info_ = std::make_unique<Ort::MemoryInfo>(
