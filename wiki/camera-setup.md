@@ -43,7 +43,22 @@ Verify with `lsusb | grep 31f7`.
 
 ## SilkyEvCam (CenturyArks) — macOS
 
-No driver installation is required.
+macOS has no separate driver concept for this device: libusb talks to the
+USB device directly, so nothing driver-like needs to be installed. The HAL
+plugin that speaks the camera's USB protocol IS required, and it is built
+automatically from the vendored OpenEB by the normal macOS build (the CI
+installs `libhal_plugin_prophesee.dylib` with the CenturyArks USB IDs
+registered — no separate vendor plugin install).
+
+Note: live-camera capture on macOS has not been hardware-verified yet (CI
+exercises file playback). If the camera does not appear in the device list,
+check that macOS sees it on the bus:
+
+```bash
+system_profiler SPUSBDataType | grep -B2 -A6 "0x31f7"
+```
+
+and please report the result.
 
 ## Prophesee / iniVation
 
