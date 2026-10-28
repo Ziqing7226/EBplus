@@ -178,9 +178,9 @@ public:
         ov_release();
 #endif
 #if defined(GUI_ALGO_HAS_ONNXRUNTIME)
-        if (load_model_ort(model_path)) {
+        if (load_model_ort(model_path, device_ != Device::CPU)) {
             model_loaded_ = true;
-            active_runtime_ = "cpu";
+            active_runtime_ = ort_dml_ ? "gpu" : "cpu";
             return true;
         }
 #endif
@@ -190,13 +190,14 @@ public:
     }
 
 #if defined(GUI_ALGO_HAS_ONNXRUNTIME)
-    /// ONNX Runtime CPU load path (also the live fallback for the OpenVINO
-    /// GPU runtime). Returns false on any Ort::Exception.
-    bool load_model_ort(const std::string& model_path) {
+    /// ONNX Runtime load path (also the live fallback for the OpenVINO
+    /// GPU runtime). With @p want_gpu the session registers the DirectML
+    /// execution provider (any GPU, no CUDA install) and falls back to CPU
+    /// on failure. Returns false on any Ort::Exception.
+    bool load_model_ort(const std::string& model_path, bool want_gpu) {
         try {
             env_ = std::make_unique<Ort::Env>(
                 ORT_LOGGING_LEVEL_WARNING, "e2vid");
-            Ort::SessionOptions session_opts;
             // Use all available CPU cores for ONNX inference (capped at 8 to
             // avoid oversubscription on high-core machines). The E2VID
             // UNetRecurrent model is compute-bound on Conv/MatMul ops, which
@@ -205,17 +206,44 @@ public:
             const unsigned hw_threads = std::thread::hardware_concurrency();
             const int num_threads = static_cast<int>(
                 hw_threads > 0 ? (hw_threads <= 8 ? hw_threads : 8) : 4);
+#ifdef _WIN32
+            const std::wstring wide_path =
+                std::filesystem::path(model_path).wstring();
+            // DML (DirectML) runs on any GPU — RTX, AMD, Intel — with no
+            // CUDA install. If the provider or session creation fails
+            // (CPU-only ORT package, unsupported op), fall back to CPU.
+            auto create_session = [&](bool dml)
+                -> std::unique_ptr<Ort::Session> {
+                Ort::SessionOptions opts;
+                opts.SetIntraOpNumThreads(num_threads);
+                opts.SetGraphOptimizationLevel(
+                    GraphOptimizationLevel::ORT_ENABLE_ALL);
+                if (dml) {
+                    opts.AppendExecutionProvider(
+                        "DML", std::unordered_map<std::string, std::string>{});
+                }
+                return std::make_unique<Ort::Session>(
+                    *env_, wide_path.c_str(), opts);
+            };
+            ort_dml_ = false;
+            if (want_gpu) {
+                try {
+                    session_ = create_session(true);
+                    ort_dml_ = true;
+                } catch (const Ort::Exception&) {
+                    session_.reset(); // fall through to the CPU session
+                }
+            }
+            if (!session_) {
+                session_ = create_session(false);
+            }
+#else
+            (void)want_gpu;
+            Ort::SessionOptions session_opts;
             session_opts.SetIntraOpNumThreads(num_threads);
             session_opts.SetGraphOptimizationLevel(
                 GraphOptimizationLevel::ORT_ENABLE_ALL);
             session_ = std::make_unique<Ort::Session>(
-#ifdef _WIN32
-                // ORTCHAR_T is wchar_t on Windows: the C++ API only accepts
-                // a wide model path here (there is no narrow overload).
-                *env_,
-                std::filesystem::path(model_path).wstring().c_str(),
-                session_opts);
-#else
                 *env_, model_path.c_str(), session_opts);
 #endif
             sync_num_bins_from_model();
@@ -1119,6 +1147,9 @@ private:
 #if defined(GUI_ALGO_HAS_ONNXRUNTIME)
     std::unique_ptr<Ort::Env> env_;
     std::unique_ptr<Ort::Session> session_;
+    /// True when the active session registered the DirectML provider
+    /// (reported as dev=gpu). Windows-only; reset per load.
+    bool ort_dml_{false};
     std::vector<Ort::Value> prev_states_;  ///< Recurrent states (UNetRecurrent).
     std::vector<std::vector<float>> state_buffers_;  ///< Backing storage for zero-init states.
 
