@@ -50,6 +50,7 @@ CameraController::CameraController(QObject* parent)
     connect(&frame_pipeline_, &FramePipeline::loader_pause_requested, this,
             [this]() {
                 if (camera_ && is_file_ && camera_->is_running()) {
+                    loader_pausing_.store(true, std::memory_order_release);
                     try { camera_->stop(); } catch (...) {}
                 }
             });
@@ -57,14 +58,19 @@ CameraController::CameraController(QObject* parent)
             [this]() {
                 if (camera_ && is_file_ && !camera_->is_running()) {
                     try { camera_->start(); } catch (...) {}
+                    loader_pausing_.store(false, std::memory_order_release);
                 }
             });
     connect(&frame_pipeline_, &FramePipeline::loader_seek_requested, this,
             [this](Metavision::timestamp t_us) {
                 if (!camera_ || !is_file_) return;
                 bool repositioned = false;
+                loader_pausing_.store(true, std::memory_order_release);
                 try {
-                    if (camera_->is_running()) camera_->stop();
+                    // ALWAYS stop first — matches the probe-verified
+                    // sequence; seeking/starting a self-stopped camera in
+                    // place silently does nothing.
+                    camera_->stop();
                     repositioned = camera_->offline_streaming_control().seek(t_us);
                 } catch (...) {
                     repositioned = false;
@@ -74,13 +80,18 @@ CameraController::CameraController(QObject* parent)
                     // handling must wait for the NEW end-of-file.
                     frame_pipeline_.set_file_loading_complete(false);
                     try { camera_->start(); } catch (...) {}
+                    loader_pausing_.store(false, std::memory_order_release);
                 } else if (!file_path_.empty()) {
                     // OSC seek unavailable/failed (e.g. a RAW whose index
                     // does not cover t): reopen the file instead. For the
                     // loop wrap (t=0) that is exact; an arbitrary backward
                     // seek lands at the file start and can be retried once
-                    // the index is ready.
-                    connect_file(file_path_);
+                    // the index is ready. connect_file only OPENS — the
+                    // caller normally start()s afterwards, so do that here.
+                    loader_pausing_.store(false, std::memory_order_release);
+                    if (connect_file(file_path_)) {
+                        start();
+                    }
                 }
             });
 }
@@ -181,6 +192,7 @@ bool CameraController::connect_serial(const std::string& serial) {
 
 bool CameraController::connect_file(const std::string& path) {
     file_path_ = path;
+    loader_pausing_.store(false, std::memory_order_release);
     // Non-SDK formats (AEDAT4 / ALPDATA) never reach Metavision::Camera —
     // the external reader streams EventCD batches into the same pipeline.
     if (is_external_file_extension(path)) {
@@ -1407,6 +1419,12 @@ void CameraController::setup_camera(Metavision::Camera&& cam, bool is_file) {
         [this](const Metavision::CameraStatus& status) {
             if (status == Metavision::CameraStatus::STARTED) {
                 emit started();
+            } else if (is_file_ && loader_pausing_.load(std::memory_order_acquire)) {
+                // Streaming playback: our OWN high-water pause / reposition
+                // stop fired STOPPED. That is not EOF — treating it as one
+                // set loading_complete early and ended/looped the playback
+                // at the pause point. Suppress; the loader resume restarts
+                // the stream and STARTED arrives as usual.
             } else {
                 // A file source stopping on its own means EOF: everything
                 // the file will ever yield is now buffered. Signal

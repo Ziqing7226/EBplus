@@ -31,10 +31,16 @@ int main(int argc, char** argv) {
     int phase              = 0; // 0 = first run, 1 = after restart
     long n_phase0          = 0;
     timestamp first_restart = -1;
+    int n_err              = 0;
+    std::string err_txt;
 
-    cam.add_runtime_error_callback([&](const CameraException&) { eof = true; });
-    // RAW files can end with a silent status change instead of a runtime
-    // error — treat STOPPED as EOF as well (this is what the GUI does).
+    // Only the STOPPED status is EOF. Runtime errors are logged (with
+    // text) but do NOT end the probe: the GUI treats Evt3 glitches as
+    // transient, and this probe previously misread one as EOF at 0.5 s.
+    cam.add_runtime_error_callback([&](const CameraException& e) {
+        ++n_err;
+        if (err_txt.empty()) err_txt = e.what();
+    });
     cam.add_status_change_callback([&](const CameraStatus& s) {
         if (s == CameraStatus::STOPPED) eof = true;
     });
@@ -55,7 +61,8 @@ int main(int argc, char** argv) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
         cam.stop();
-        std::printf("phase0: eof reached, last_t=%lld us\n", (long long)last);
+        std::printf("phase0: eof, last_t=%lld us, runtime_errors=%d first=\"%s\"\n",
+                    (long long)last, n_err, err_txt.c_str());
 
         bool seek_ok = false;
         try {

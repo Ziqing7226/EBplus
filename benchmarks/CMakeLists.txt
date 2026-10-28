@@ -26,6 +26,12 @@ add_executable(bench_streampause bench_streampause.cpp)
 target_link_libraries(bench_streampause PRIVATE gui_algo)
 target_compile_options(bench_streampause PRIVATE ${BENCH_COMPILE_OPTIONS})
 
+# Headless loop reproduction through the real streaming components:
+# CameraController + FileFrameGenerator + loop. PASS = position wraps.
+add_executable(bench_loop bench_loop.cpp)
+target_link_libraries(bench_loop PRIVATE gui_core)
+target_compile_options(bench_loop PRIVATE ${BENCH_COMPILE_OPTIONS})
+
 # Mat -> QImage conversion chain A/B (old cvtColor+copy vs direct write),
 # including a byte-for-byte equality assert.
 add_executable(bench_frame_conv bench_frame_conv.cpp)

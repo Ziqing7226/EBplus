@@ -476,6 +476,10 @@ private:
     /// OSC seek fails, e.g. loop wrap on a RAW whose index does not cover
     /// the target).
     std::string file_path_;
+    /// True while the streaming loader has the file Camera intentionally
+    /// stopped (high-water pause / reposition): the STOPPED status such a
+    /// stop fires is NOT a file EOF.
+    std::atomic<bool> loader_pausing_{false};
     /// Conditioned-stream listener (live mode), guarded by
     /// conditioned_mutex_. Copied into a local before invocation so a
     /// set_conditioned_listener() during a callback cannot race.
