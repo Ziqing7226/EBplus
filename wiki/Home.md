@@ -11,6 +11,7 @@ EB plus gives you a complete desktop workflow for event-camera data: real-time v
 | Page | What's inside |
 |------|---------------|
 | [Getting Started](Getting-Started.md) | Build, run, environment variables, troubleshooting |
+| [Camera Setup](camera-setup.md) | Per-vendor driver/udev setup — incl. the SilkyEvCam Windows driver |
 | [GUI Guide](GUI-Guide.md) | VSCode-style sidebar, panels, display modes, theming, shortcuts |
 | [Algorithms](Algorithms.md) | Algorithm registry, categories, E2VID, preprocessing, noise filter |
 | [Architecture](Architecture.md) | Directory layout, AlgoBridge, data flow, extension points |
@@ -34,7 +35,7 @@ EB plus gives you a complete desktop workflow for event-camera data: real-time v
 | Vendor | Connection |
 |--------|------------|
 | Prophesee | openEB HAL plugin path |
-| CenturyArks | openEB HAL plugin path |
+| CenturyArks | openEB HAL plugin path — Windows needs the vendor's USB driver, see [Camera Setup](camera-setup.md) |
 | inivation DAVIS / DVXplorer | Direct USB (libusb) — see [Getting Started](Getting-Started.md) |
 
 Set `MV_HAL_PLUGIN_PATH` to match your Prophesee/CenturyArks camera before launching; inivation devices are discovered over USB directly (udev rules included).
