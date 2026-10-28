@@ -43,6 +43,36 @@ CameraController::CameraController(QObject* parent)
                     tr("Event buffer memory limit reached; events beyond "
                        "this point were discarded."));
             });
+    // Streaming file playback (bounded buffer): the FileFrameGenerator
+    // parks the SDK file stream at its high-water mark, resumes it at the
+    // low-water mark, and asks for a reposition when the cursor leaves the
+    // buffered window (out-of-buffer seek, loop wrap, EOF restart).
+    connect(&frame_pipeline_, &FramePipeline::loader_pause_requested, this,
+            [this]() {
+                if (camera_ && is_file_ && camera_->is_running()) {
+                    try { camera_->stop(); } catch (...) {}
+                }
+            });
+    connect(&frame_pipeline_, &FramePipeline::loader_resume_requested, this,
+            [this]() {
+                if (camera_ && is_file_ && !camera_->is_running()) {
+                    try { camera_->start(); } catch (...) {}
+                }
+            });
+    connect(&frame_pipeline_, &FramePipeline::loader_seek_requested, this,
+            [this](Metavision::timestamp t_us) {
+                if (camera_ && is_file_) {
+                    try {
+                        if (camera_->is_running()) camera_->stop();
+                        camera_->offline_streaming_control().seek(t_us);
+                        // The loader re-streams from the new position: EOF
+                        // handling must wait for the NEW end-of-file, not
+                        // the previous one.
+                        frame_pipeline_.set_file_loading_complete(false);
+                        camera_->start();
+                    } catch (...) {}
+                }
+            });
 }
 
 CameraController::~CameraController() {
@@ -1416,6 +1446,7 @@ void CameraController::setup_camera(Metavision::Camera&& cam, bool is_file) {
     const Metavision::timestamp acc = frame_pipeline_.accumulation_time_us();
     if (is_file) {
         frame_pipeline_.set_file_filter_chain(&filter_chain_);
+        frame_pipeline_.set_file_streaming(true);
         if (!frame_pipeline_.start_file(w, h, fps, acc)) {
             // Without a running pipeline the display stays black forever —
             // abort the connection instead of reporting "Connected"

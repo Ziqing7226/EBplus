@@ -22,6 +22,12 @@ FramePipeline::FramePipeline(QObject* parent) : QObject(parent) {
             this, &FramePipeline::events_window_ready);
     connect(&file_generator_, &FileFrameGenerator::buffer_truncated,
             this, &FramePipeline::file_buffer_truncated);
+    connect(&file_generator_, &FileFrameGenerator::stream_pause_requested,
+            this, &FramePipeline::loader_pause_requested);
+    connect(&file_generator_, &FileFrameGenerator::stream_resume_requested,
+            this, &FramePipeline::loader_resume_requested);
+    connect(&file_generator_, &FileFrameGenerator::loader_seek_requested,
+            this, &FramePipeline::loader_seek_requested);
 
     // File-path frame-mode rendering: render_frame feeds the shared renderer.
     file_generator_.set_frame_mode_renderer(&frame_mode_renderer_);

@@ -29,6 +29,7 @@ void FileFrameGenerator::add_events(const Metavision::EventCD* begin,
                                     const Metavision::EventCD* end) {
     if (begin == nullptr || end == nullptr || begin >= end) return;
     bool just_truncated = false;
+    bool pause_loader = false;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         // OOM guard (audit §六-C2): never let the buffer grow past
@@ -51,6 +52,37 @@ void FileFrameGenerator::add_events(const Metavision::EventCD* begin,
                     break;
                 }
             }
+            if (streaming_) {
+                // A pending reposition is satisfied once events at/after the
+                // target have arrived.
+                if (awaiting_seek_.load(std::memory_order_acquire) &&
+                    last_t >= seek_target_.load(std::memory_order_relaxed)) {
+                    awaiting_seek_.store(false, std::memory_order_release);
+                }
+                // Bounded buffer: drop events far behind the cursor, then
+                // pause the loader at the high-water span. Events arrive
+                // time-sorted, so the hold-back horizon is a scan from the
+                // previous trim position; the vector prefix is erased in
+                // batches to keep the amortized cost low.
+                const Metavision::timestamp holdback_t =
+                    cursor_us_.load(std::memory_order_relaxed) - kStreamHoldBackUs;
+                while (trim_start_ < events_.size() &&
+                       events_[trim_start_].t < holdback_t) {
+                    ++trim_start_;
+                }
+                constexpr std::size_t kTrimCompactEvents = 4'000'000;
+                if (trim_start_ >= kTrimCompactEvents) {
+                    events_.erase(events_.begin(),
+                                  events_.begin() + static_cast<std::ptrdiff_t>(trim_start_));
+                    trim_start_ = 0;
+                }
+                if (!stream_paused_.load(std::memory_order_acquire) &&
+                    last_t - cursor_us_.load(std::memory_order_relaxed) >
+                        kStreamHighWaterUs) {
+                    stream_paused_.store(true, std::memory_order_release);
+                    pause_loader = true;
+                }
+            }
         }
         if (n > room && !truncated_) {
             truncated_ = true;
@@ -60,6 +92,9 @@ void FileFrameGenerator::add_events(const Metavision::EventCD* begin,
     // Emit outside the lock; Qt queues this to GUI-thread listeners.
     if (just_truncated) {
         emit buffer_truncated();
+    }
+    if (pause_loader) {
+        emit stream_pause_requested();
     }
 }
 
@@ -136,10 +171,14 @@ void FileFrameGenerator::play() {
     const Metavision::timestamp dur = duration_us_.load(std::memory_order_relaxed);
     if (dur > 0 && cursor_us_ >= dur &&
         loading_complete_.load(std::memory_order_acquire)) {
-        cursor_us_ = 0;
         // Same contract as seek()/looped(): stateful algorithms must reset
         // before events from the beginning of the file arrive (audit §六-P4).
-        emit seeked(0);
+        if (streaming_) {
+            loader_reposition(0);
+        } else {
+            cursor_us_ = 0;
+            emit seeked(0);
+        }
     }
     playing_ = true;
     timer_.start(1000 / static_cast<int>(fps_));
@@ -158,6 +197,24 @@ void FileFrameGenerator::seek(Metavision::timestamp t_us) {
     // EOF had been reached — audit §六-P5).
     const Metavision::timestamp dur = duration_us_.load(std::memory_order_relaxed);
     if (dur > 0 && t_us > dur) t_us = dur;
+    if (streaming_) {
+        // Streaming mode: only a window around the cursor is buffered. A
+        // target inside the buffer is a plain cursor move; anything else
+        // needs the loader to reposition (which clears the buffer).
+        bool inside = false;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            inside = trim_start_ < events_.size() &&
+                     t_us >= events_[trim_start_].t &&
+                     t_us <= events_.back().t;
+        }
+        if (!inside) {
+            loader_reposition(t_us);
+            return;
+        }
+        stream_paused_.store(false, std::memory_order_release);
+        emit stream_resume_requested();
+    }
     cursor_us_ = t_us;
     // Display filter temporal state must not span a backward time jump
     // (Phase 2.5) — stale timestamp surfaces would suppress events.
@@ -204,6 +261,11 @@ void FileFrameGenerator::clear() {
     // loader signals completion (audit §六-P2).
     loading_complete_.store(false, std::memory_order_release);
     cursor_us_ = 0;
+    // Streaming state (bounded-buffer playback).
+    trim_start_ = 0;
+    stream_paused_.store(false, std::memory_order_release);
+    awaiting_seek_.store(false, std::memory_order_release);
+    seek_target_.store(0, std::memory_order_relaxed);
 }
 
 bool FileFrameGenerator::is_truncated() const {
@@ -211,8 +273,47 @@ bool FileFrameGenerator::is_truncated() const {
     return truncated_;
 }
 
+void FileFrameGenerator::loader_reposition(Metavision::timestamp t_us) {
+    // Drop everything — the loader will re-stream from the new position.
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        events_.clear();
+        trim_start_ = 0;
+        truncated_ = false;
+    }
+    cursor_us_ = t_us;
+    seek_target_.store(t_us, std::memory_order_relaxed);
+    awaiting_seek_.store(true, std::memory_order_release);
+    stream_paused_.store(false, std::memory_order_release);
+    // Display filter temporal state must not span the time jump (Phase 2.5)
+    // and stateful algorithms reset via seeked(), same contract as seek().
+    conditioner_.reset_temporal();
+    emit seeked(t_us);
+    emit loader_seek_requested(t_us);
+}
+
+void FileFrameGenerator::maybe_resume_loader() {
+    if (!stream_paused_.load(std::memory_order_acquire)) return;
+    Metavision::timestamp newest = 0;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!events_.empty()) newest = events_.back().t;
+    }
+    const Metavision::timestamp cur = cursor_us_.load(std::memory_order_relaxed);
+    const Metavision::timestamp dur = duration_us_.load(std::memory_order_relaxed);
+    // Resume when the buffered span drains below the low-water mark, or when
+    // the loader is close enough to the file end that it must run to EOF.
+    if (newest - cur < kStreamLowWaterUs || (dur > 0 && newest >= dur)) {
+        stream_paused_.store(false, std::memory_order_release);
+        emit stream_resume_requested();
+    }
+}
+
 void FileFrameGenerator::on_timer() {
     if (width_ <= 0 || height_ <= 0) return;
+    // A loader reposition (out-of-buffer seek / loop wrap / EOF restart) is
+    // in flight: hold the last frame until events at the new position arrive.
+    if (awaiting_seek_.load(std::memory_order_acquire)) return;
 
     const Metavision::timestamp dur = duration_us_.load(std::memory_order_relaxed);
 
@@ -236,20 +337,31 @@ void FileFrameGenerator::on_timer() {
     // the lesser evil.
     if (dur > 0 && cursor_us_ >= dur) {
         if (!loading_complete_.load(std::memory_order_acquire)) {
+            // Streaming mode: the loader may be parked at the high-water
+            // mark — resume it so it can reach EOF; without this the
+            // catch-up wait would never end.
+            maybe_resume_loader();
             return;
         }
         if (loop_) {
-            cursor_us_ = 0;
             // Display filter temporal state must not span the loop wrap
             // (Phase 2.5) — event time jumps back to the start of the file.
             conditioner_.reset_temporal();
             emit looped();
+            if (streaming_) {
+                // The start of the file is no longer buffered: reposition.
+                loader_reposition(0);
+                return;
+            }
+            cursor_us_ = 0;
         } else {
             timer_.stop();
             playing_ = false;
             emit eof_reached();
             return;
         }
+    } else if (streaming_) {
+        maybe_resume_loader();
     }
 
     const Metavision::timestamp start = cursor_us_;

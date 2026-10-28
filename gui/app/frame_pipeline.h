@@ -155,6 +155,10 @@ public:
     void seek_file(Metavision::timestamp t_us);
     void set_file_loop(bool on);
     void set_file_duration_us(Metavision::timestamp us);
+    /// @brief Enables bounded-buffer (streaming) file playback: the loader
+    /// streams only a window ahead of the cursor; large files open instantly
+    /// and memory stays bounded. Set once per file connect.
+    void set_file_streaming(bool on) { file_generator_.set_streaming(on); }
     /// @brief Tells the FileFrameGenerator whether the file loader has
     /// finished streaming the whole file into the buffer (audit §六-P2).
     /// Called by CameraController when the SDK file camera hits EOF.
@@ -198,6 +202,13 @@ signals:
     /// File mode: emitted once when the FileFrameGenerator's event buffer
     /// hits its hard cap and further events are dropped (audit §六-C2).
     void file_buffer_truncated();
+
+    /// File mode, streaming playback: the loader must be stopped / started /
+    /// repositioned (OSC seek + start) — see FileFrameGenerator's streaming
+    /// block. CameraController owns the file Camera and acts on these.
+    void loader_pause_requested();
+    void loader_resume_requested();
+    void loader_seek_requested(Metavision::timestamp t_us);
 
 private:
     void recreate_window();

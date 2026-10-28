@@ -77,6 +77,19 @@ public:
     /// ~4.8 GB resident — beyond this we drop incoming batches.
     static constexpr std::size_t kMaxBufferedEvents = 300'000'000;
 
+    /// @brief Streaming (bounded-buffer) playback. When enabled, the SDK
+    /// loader streams only a small window ahead of the cursor: at the
+    /// high-water span the loader is paused (stream_pause_requested) and
+    /// on_timer() resumes it at the low-water span. The buffer then holds
+    /// ~[cursor - holdback, cursor + highwater] instead of the whole file,
+    /// so large files open instantly, memory stays bounded and nothing is
+    /// truncated. Requires the owner to wire stream_pause_requested /
+    /// stream_resume_requested / loader_seek_requested to the file Camera.
+    void set_streaming(bool on) { streaming_ = on; }
+    static constexpr Metavision::timestamp kStreamHighWaterUs = 2'000'000;
+    static constexpr Metavision::timestamp kStreamLowWaterUs  =   400'000;
+    static constexpr Metavision::timestamp kStreamHoldBackUs  =   500'000;
+
     /// @brief Sets the sensor geometry for frame rendering.
     void set_geometry(long width, long height);
 
@@ -199,14 +212,40 @@ signals:
     /// streaming thread (queued to listeners on the GUI thread).
     void buffer_truncated();
 
+    /// @brief Streaming loader control (streaming_ mode only).
+    /// stream_pause_requested: emitted (SDK thread) when the buffered span
+    /// ahead of the cursor reaches kStreamHighWaterUs — the owner must stop
+    /// the file Camera. stream_resume_requested: emitted (GUI thread) when
+    /// the span falls below kStreamLowWaterUs (or the file end is near) —
+    /// the owner must start the Camera again. loader_seek_requested: the
+    /// cursor moved outside the buffered window (user seek past the buffer,
+    /// loop wrap, EOF restart) — the owner must stop the Camera, OSC-seek
+    /// to the target and start it.
+    void stream_pause_requested();
+    void stream_resume_requested();
+    void loader_seek_requested(Metavision::timestamp t_us);
+
     /// @brief Per-window algorithm feed hook (P6-A file-mode write-back).
     /// Called synchronously inside render_frame() AFTER the window events are
 private:
     void on_timer();
     void render_frame(Metavision::timestamp start_us, Metavision::timestamp end_us);
+    /// Streaming loader path: clear the buffer, park the cursor at @p t_us
+    /// and ask the owner to reposition the file Camera there (GUI thread).
+    void loader_reposition(Metavision::timestamp t_us);
+    /// Resume the loader if the streaming high-water pause is active (GUI).
+    void maybe_resume_loader();
 
     // Event buffer — appended from SDK thread, read from GUI thread.
     std::vector<Metavision::EventCD> events_;
+    // Streaming state: events_[0..trim_start_) are behind the hold-back
+    // horizon and get erased in batches (mutex_); the loader pause flag and
+    // the in-flight reposition flag are cross-thread.
+    std::size_t trim_start_{0};
+    std::atomic<bool> stream_paused_{false};
+    std::atomic<bool> awaiting_seek_{false};
+    std::atomic<Metavision::timestamp> seek_target_{0};
+    bool streaming_{false};
     std::function<std::pair<const Metavision::EventCD*, std::size_t>()> algo_feed_cb_;
     mutable std::mutex mutex_;
     // OOM guard state (audit §六-C2), guarded by mutex_.
@@ -227,9 +266,10 @@ private:
     bool loop_{false};
     Metavision::ColorPalette palette_{Metavision::ColorPalette::Dark};
 
-    // Playback state (GUI thread only)
+    // Playback state (cursor is cross-thread: add_events reads it for the
+    // streaming water marks; written on the GUI thread).
     QTimer timer_;
-    Metavision::timestamp cursor_us_{0};
+    std::atomic<Metavision::timestamp> cursor_us_{0};
     bool playing_{false};
 
     // Reused render buffer (BGR)
