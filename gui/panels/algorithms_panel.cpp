@@ -236,7 +236,12 @@ void AlgorithmsPanel::build_ui() {
             // view. Their status line (detection counts / effective params)
             // lives in this read-only label, visible while enabled.
             QLabel* status_lbl = nullptr;
-            if (a->display_mode == AlgoDisplayMode::Overlay) {
+            {
+                // Status line for EVERY algorithm (not just Overlay): the
+                // DL algorithms report model=loaded/heuristic + dev= here —
+                // without it a silent heuristic fallback is invisible to
+                // the user (the label above the toggle only existed for
+                // Overlay-mode algorithms).
                 status_lbl = new QLabel(gb);
                 status_lbl->setWordWrap(true);
                 status_lbl->setVisible(false);
