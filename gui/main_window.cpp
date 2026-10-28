@@ -2048,10 +2048,10 @@ void MainWindow::process_algo_results(QImage& frame) {
             continue;
         }
         // Overlay algorithms no longer have an AlgoWindow (Phase 2.6 debug
-        // D-1) — surface their status line (detection counts / effective
-        // params) in the sidebar instead.
-        if (inst->info().display_mode == AlgoDisplayMode::Overlay &&
-            !r.status.empty()) {
+        // D-1) — their status line lives in the sidebar. Surface it for
+        // EVERY algorithm: the DL ones report model=loaded/heuristic + dev=
+        // here, and a silent heuristic fallback must stay visible.
+        if (!r.status.empty()) {
             if (auto* ap = settings_->algorithms_panel()) {
                 ap->set_algo_status(inst->info().name,
                                     QString::fromStdString(r.status));
