@@ -108,19 +108,18 @@ bool CDFrameGenerator::generate() {
         // keeping only a small horizon around the newest timestamp bounds
         // both the work per frame and the queue memory. Events arrive
         // time-sorted, so the horizon is a binary search.
-        const EventCD *first_to_use = events_front_.data();
+        auto first_to_use = std::cbegin(events_front_);
         const timestamp horizon =
             events_front_.back().t - 2 * static_cast<timestamp>(accumulation_time_us_);
         if (horizon > events_front_.front().t) {
             first_to_use = std::lower_bound(
-                events_front_.begin(), events_front_.end(), horizon,
+                std::cbegin(events_front_), std::cend(events_front_), horizon,
                 [](const EventCD &e, timestamp t) { return e.t < t; });
         }
-        frame_generation_algo_->process_events(first_to_use, events_front_.data() + events_front_.size());
-        return;
+        frame_generation_algo_->process_events(first_to_use, std::cend(events_front_));
+    } else {
+        frame_generation_algo_->process_events(events_front_.cbegin(), events_front_.cend());
     }
-
-    frame_generation_algo_->process_events(events_front_.cbegin(), events_front_.cend());
     if (stop_) {
         frame_generation_algo_->force_generate();
     }
