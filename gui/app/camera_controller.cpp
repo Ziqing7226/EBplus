@@ -30,16 +30,28 @@ namespace {
 constexpr unsigned long long kEvt3BytesPerEventEstimate = 8;
 constexpr unsigned long long kWarnEventCount = 150'000'000;
 
-// TEMPORARY open diagnostics (P2): append one line per open attempt to
-// %TEMP%\ebplus-open-diag.log so a GUI open failure reported by a user can
-// be diagnosed from the log file alone (real exception text, relevant env).
-// Remove once the file-open path is confirmed on the affected machine.
+// TEMPORARY open diagnostics (P2 + flip switch P3): append one line per
+// event to %TEMP%\ebplus-open-diag.log so a remotely-reported failure can
+// be diagnosed from the log file alone (real exception text, relevant env,
+// and the camera-switch sequence). Remove once confirmed on the machine.
+void open_diag_stamp(std::FILE* f) {
+    const std::time_t now = std::time(nullptr);
+    std::tm tm_buf{};
+    localtime_s(&tm_buf, &now);
+    char stamp[16];
+    std::strftime(stamp, sizeof(stamp), "%H:%M:%S", &tm_buf);
+    std::fputs("[", f);
+    std::fputs(stamp, f);
+    std::fputs("] ", f);
+}
+
 void open_diag_line(const char* what, const char* detail = nullptr) {
     const char* tmp = std::getenv("TEMP");
     if (!tmp) return;
     std::FILE* f = std::fopen((std::string(tmp) + "\\ebplus-open-diag.log").c_str(), "a");
     if (!f) return;
-    std::fputs("[connect_file] ", f);
+    open_diag_stamp(f);
+    std::fputs("[ctrl] ", f);
     std::fputs(what, f);
     if (detail && *detail) {
         std::fputs(": ", f);
@@ -1359,6 +1371,12 @@ void CameraController::setup_camera(Metavision::Camera&& cam, bool is_file) {
     is_file_ = is_file;
     camera_ = std::make_unique<Metavision::Camera>(std::move(cam));
     fetch_sensor_info();
+    { // TEMPORARY flip-switch diagnostics
+        char b[96];
+        std::snprintf(b, sizeof(b), "is_file=%d sensor=%dx%d", is_file ? 1 : 0,
+                      sensor_info_.width, sensor_info_.height);
+        open_diag_line("setup_camera", b);
+    }
 
     // Runtime error callback: file EOF, disconnects, firmware errors arrive here.
     // Capture the camera pointer: this callback's queued lambdas may execute
@@ -1492,6 +1510,7 @@ void CameraController::setup_camera(Metavision::Camera&& cam, bool is_file) {
 }
 
 void CameraController::teardown() {
+    open_diag_line("teardown begin"); // TEMPORARY flip-switch diagnostics
 #if GUI_HAVE_DAVIS
     // 0a. Stop the DAVIS stream and release the device first: its libusb
     //     thread feeds statistics_/frame_pipeline_ exactly like the SDK
