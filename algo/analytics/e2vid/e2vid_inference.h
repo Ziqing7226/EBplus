@@ -196,8 +196,12 @@ public:
     /// on failure. Returns false on any Ort::Exception.
     bool load_model_ort(const std::string& model_path, bool want_gpu) {
         try {
+            // ERROR, not WARNING: with a GPU execution provider ORT logs a
+            // benign "some nodes not assigned to the preferred providers"
+            // warning per session (shape ops stay on CPU by design) —
+            // console noise at every startup otherwise.
             env_ = std::make_unique<Ort::Env>(
-                ORT_LOGGING_LEVEL_WARNING, "e2vid");
+                ORT_LOGGING_LEVEL_ERROR, "e2vid");
             // Use all available CPU cores for ONNX inference (capped at 8 to
             // avoid oversubscription on high-core machines). The E2VID
             // UNetRecurrent model is compute-bound on Conv/MatMul ops, which
