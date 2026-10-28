@@ -198,22 +198,12 @@ void FileFrameGenerator::seek(Metavision::timestamp t_us) {
     const Metavision::timestamp dur = duration_us_.load(std::memory_order_relaxed);
     if (dur > 0 && t_us > dur) t_us = dur;
     if (streaming_) {
-        // Streaming mode: only a window around the cursor is buffered. A
-        // target inside the buffer is a plain cursor move; anything else
-        // needs the loader to reposition (which clears the buffer).
-        bool inside = false;
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            inside = trim_start_ < events_.size() &&
-                     t_us >= events_[trim_start_].t &&
-                     t_us <= events_.back().t;
-        }
-        if (!inside) {
-            loader_reposition(t_us);
-            return;
-        }
-        stream_paused_.store(false, std::memory_order_release);
-        emit stream_resume_requested();
+        // Streaming mode: only a small window around the cursor is
+        // buffered, and after an EOF the loader sits at the file end — an
+        // in-buffer fast path would play into a dead stream. ALWAYS
+        // reposition the loader; it re-streams from the target.
+        loader_reposition(t_us);
+        return;
     }
     cursor_us_ = t_us;
     // Display filter temporal state must not span a backward time jump

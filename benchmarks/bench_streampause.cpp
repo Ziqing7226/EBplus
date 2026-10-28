@@ -16,9 +16,10 @@ using namespace Metavision;
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::printf("usage: %s <file>\n", argv[0]);
+        std::printf("usage: %s <file> [eof]\n", argv[0]);
         return 2;
     }
+    const bool eof_mode = argc > 2 && std::string(argv[2]) == "eof";
 
     FileConfigHints hints;
     hints.real_time_playback(false);
@@ -39,6 +40,40 @@ int main(int argc, char** argv) {
             first_restart = b->t;
         }
     });
+
+    cam.start();
+    if (eof_mode) {
+        // Loop-wrap scenario: stream the WHOLE file to EOF, then seek(0)
+        // and restart. This is what FileFrameGenerator's loop does.
+        while (!eof) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        cam.stop();
+        std::printf("phase0: eof reached, last_t=%lld us\n", (long long)last);
+
+        bool seek_ok = false;
+        try {
+            seek_ok = cam.offline_streaming_control().seek(0);
+        } catch (const std::exception& e) {
+            std::printf("seek(0) THREW: %s\n", e.what());
+        }
+        std::printf("osc.seek(0) => %s\n", seek_ok ? "true" : "false");
+
+        phase = 1;
+        cam.start();
+        std::this_thread::sleep_for(std::chrono::milliseconds(800));
+        cam.stop();
+        std::printf("phase1: first_t_after_restart=%lld us\n",
+                    (long long)first_restart);
+        if (first_restart < 0) {
+            std::printf("RESULT: FROZEN (no events after seek(0)+start)\n");
+            return 1;
+        }
+        std::printf("RESULT: LOOP-RESTART %s (first_t=%lld)\n",
+                    first_restart == 0 ? "AT-ZERO" : "AT-WRONG-TS",
+                    (long long)first_restart);
+        return first_restart == 0 ? 0 : 1;
+    }
 
     cam.start();
     while (last < 1'500'000 && !eof) {

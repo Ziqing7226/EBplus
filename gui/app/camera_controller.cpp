@@ -61,16 +61,26 @@ CameraController::CameraController(QObject* parent)
             });
     connect(&frame_pipeline_, &FramePipeline::loader_seek_requested, this,
             [this](Metavision::timestamp t_us) {
-                if (camera_ && is_file_) {
-                    try {
-                        if (camera_->is_running()) camera_->stop();
-                        camera_->offline_streaming_control().seek(t_us);
-                        // The loader re-streams from the new position: EOF
-                        // handling must wait for the NEW end-of-file, not
-                        // the previous one.
-                        frame_pipeline_.set_file_loading_complete(false);
-                        camera_->start();
-                    } catch (...) {}
+                if (!camera_ || !is_file_) return;
+                bool repositioned = false;
+                try {
+                    if (camera_->is_running()) camera_->stop();
+                    repositioned = camera_->offline_streaming_control().seek(t_us);
+                } catch (...) {
+                    repositioned = false;
+                }
+                if (repositioned) {
+                    // The loader re-streams from the new position: EOF
+                    // handling must wait for the NEW end-of-file.
+                    frame_pipeline_.set_file_loading_complete(false);
+                    try { camera_->start(); } catch (...) {}
+                } else if (!file_path_.empty()) {
+                    // OSC seek unavailable/failed (e.g. a RAW whose index
+                    // does not cover t): reopen the file instead. For the
+                    // loop wrap (t=0) that is exact; an arbitrary backward
+                    // seek lands at the file start and can be retried once
+                    // the index is ready.
+                    connect_file(file_path_);
                 }
             });
 }
@@ -170,6 +180,7 @@ bool CameraController::connect_serial(const std::string& serial) {
 }
 
 bool CameraController::connect_file(const std::string& path) {
+    file_path_ = path;
     // Non-SDK formats (AEDAT4 / ALPDATA) never reach Metavision::Camera —
     // the external reader streams EventCD batches into the same pipeline.
     if (is_external_file_extension(path)) {

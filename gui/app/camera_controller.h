@@ -472,6 +472,10 @@ private:
     /// Shared conditioning (live batches). The file source's conditioner
     /// lives inside FileFrameGenerator; only one is ever active.
     StreamConditioner conditioner_;
+    /// Path of the currently-open file (streaming fallback: reopen when the
+    /// OSC seek fails, e.g. loop wrap on a RAW whose index does not cover
+    /// the target).
+    std::string file_path_;
     /// Conditioned-stream listener (live mode), guarded by
     /// conditioned_mutex_. Copied into a local before invocation so a
     /// set_conditioned_listener() during a callback cannot race.
