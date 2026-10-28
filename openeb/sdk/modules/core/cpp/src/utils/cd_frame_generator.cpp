@@ -12,6 +12,9 @@
 #include "metavision/sdk/core/utils/cd_frame_generator.h"
 #include "metavision/sdk/core/utils/colors.h"
 
+#include <algorithm>
+#include <vector>
+
 namespace Metavision {
 
 CDFrameGenerator::CDFrameGenerator(long width, long height, bool process_all_frames) :
@@ -96,6 +99,25 @@ bool CDFrameGenerator::generate() {
     if (!process_all_frames_ && !events_front_.empty()) {
         // Generates only the last possible frame
         frame_generation_algo_->skip_frames_up_to(events_front_.back().t);
+
+        // Shed stale events: the single frame generated below only covers
+        // [next_frame_ts - accumulation, next_frame_ts], so events older
+        // than that cannot influence it. Walking them made generate() slow
+        // down without bound when production outpaces consumption (the
+        // event queue grows forever and the display lag grows with it);
+        // keeping only a small horizon around the newest timestamp bounds
+        // both the work per frame and the queue memory. Events arrive
+        // time-sorted, so the horizon is a binary search.
+        const EventCD *first_to_use = events_front_.data();
+        const timestamp horizon =
+            events_front_.back().t - 2 * static_cast<timestamp>(accumulation_time_us_);
+        if (horizon > events_front_.front().t) {
+            first_to_use = std::lower_bound(
+                events_front_.begin(), events_front_.end(), horizon,
+                [](const EventCD &e, timestamp t) { return e.t < t; });
+        }
+        frame_generation_algo_->process_events(first_to_use, events_front_.data() + events_front_.size());
+        return;
     }
 
     frame_generation_algo_->process_events(events_front_.cbegin(), events_front_.cend());
