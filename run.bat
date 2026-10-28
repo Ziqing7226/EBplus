@@ -57,5 +57,10 @@ if not exist "%SCRIPT_DIR%models\e2vid_lightweight.onnx" (
     echo [run.bat] Run scripts\setup_dl_models.bat to check / convert models.
 )
 
+rem ---- working directory ----
+rem The DL model defaults ("models/e2vid_lightweight.onnx", ...) are
+rem repo-relative; resolve them the same way run.sh does.
+cd /d "%SCRIPT_DIR%"
+
 "%BIN%" %*
 endlocal
