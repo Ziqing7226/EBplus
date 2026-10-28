@@ -62,6 +62,14 @@ export QSG_RHI_BACKEND="${QSG_RHI_BACKEND:-opengl}"
 # Suppress harmless GTK/dconf warnings from Qt's GTK theme integration.
 export QT_LOGGING_RULES="${QT_LOGGING_RULES:-*.warning=false}"
 
+# ---- DL model self-check (non-blocking) ----
+# DL-based algorithms (E2VID, FireNet, HyperE2VID, EvFlownet) load ONNX
+# models from models/; missing models only disable those algorithms.
+if [ ! -f "$REPO_ROOT/models/e2vid_lightweight.onnx" ]; then
+    echo "[run.sh] DL models not configured - DL-based algorithms will be unavailable." >&2
+    echo "[run.sh] Run scripts/setup_dl_models.sh to check / convert models." >&2
+fi
+
 # ---- launch ----
 # Run from the repo root: the GUI's default model paths
 # ("models/e2vid_lightweight.onnx", ...) are repo-relative and only resolve

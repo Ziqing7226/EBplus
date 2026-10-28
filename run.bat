@@ -49,5 +49,13 @@ rem Qt 6 may default to the direct3d RHI backend and produce a black viewport
 rem on some GPUs; force OpenGL (mirrors main.cpp / run.sh behaviour).
 if "%QSG_RHI_BACKEND%"=="" set "QSG_RHI_BACKEND=opengl"
 
+rem ---- DL model self-check (non-blocking) ----
+rem DL-based algorithms (E2VID, FireNet, HyperE2VID, EvFlownet) load ONNX
+rem models from models\; missing models only disable those algorithms.
+if not exist "%SCRIPT_DIR%models\e2vid_lightweight.onnx" (
+    echo [run.bat] DL models not configured - DL-based algorithms will be unavailable.
+    echo [run.bat] Run scripts\setup_dl_models.bat to check / convert models.
+)
+
 "%BIN%" %*
 endlocal
