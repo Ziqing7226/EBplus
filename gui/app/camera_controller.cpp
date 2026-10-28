@@ -5,11 +5,6 @@
 #include <QMetaObject>
 #include <QString>
 
-#include <QCoreApplication>
-
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
 #include <filesystem>
 
 #include <cstdint>
@@ -29,64 +24,10 @@ namespace {
 // open: the user decides whether to continue.
 constexpr unsigned long long kEvt3BytesPerEventEstimate = 8;
 constexpr unsigned long long kWarnEventCount = 150'000'000;
-
-// TEMPORARY open diagnostics (P2 + flip switch P3): append one line per
-// event to %TEMP%\ebplus-open-diag.log so a remotely-reported failure can
-// be diagnosed from the log file alone (real exception text, relevant env,
-// and the camera-switch sequence). Remove once confirmed on the machine.
-void open_diag_stamp(std::FILE* f) {
-    const std::time_t now = std::time(nullptr);
-    std::tm tm_buf{};
-    localtime_s(&tm_buf, &now);
-    char stamp[16];
-    std::strftime(stamp, sizeof(stamp), "%H:%M:%S", &tm_buf);
-    std::fputs("[", f);
-    std::fputs(stamp, f);
-    std::fputs("] ", f);
-}
-
-void open_diag_line(const char* what, const char* detail = nullptr) {
-    const char* tmp = std::getenv("TEMP");
-    if (!tmp) return;
-    std::FILE* f = std::fopen((std::string(tmp) + "\\ebplus-open-diag.log").c_str(), "a");
-    if (!f) return;
-    open_diag_stamp(f);
-    std::fputs("[ctrl] ", f);
-    std::fputs(what, f);
-    if (detail && *detail) {
-        std::fputs(": ", f);
-        std::fputs(detail, f);
-    }
-    std::fputs("\n", f);
-    std::fclose(f);
-}
-
-// Session separator: one line per GUI start, so entries from different
-// launches (and different launchers) can be told apart in the log.
-void open_diag_session() {
-    const char* tmp = std::getenv("TEMP");
-    if (!tmp) return;
-    std::FILE* f = std::fopen((std::string(tmp) + "\\ebplus-open-diag.log").c_str(), "a");
-    if (!f) return;
-    std::fputs("---- new session ", f);
-    const std::time_t now = std::time(nullptr);
-    std::fputs(std::ctime(&now), f); // ctime() appends its own newline
-    std::fclose(f);
-}
 } // namespace
 
 CameraController::CameraController(QObject* parent)
     : QObject(parent), frame_pipeline_(nullptr), statistics_(nullptr) {
-    // TEMPORARY (P2): record the launcher-provided environment at startup so
-    // a remotely-reported open failure can be traced to what the process
-    // ACTUALLY received (run.bat vs start-ebplus.cmd vs a double-clicked
-    // exe), not to what the launcher script looks like it should set.
-    open_diag_session();
-    const QByteArray exe_path = QCoreApplication::applicationFilePath().toUtf8();
-    open_diag_line("startup exe", exe_path.constData());
-    open_diag_line("startup MV_HAL_PLUGIN_PATH", std::getenv("MV_HAL_PLUGIN_PATH"));
-    open_diag_line("startup HDF5_PLUGIN_PATH", std::getenv("HDF5_PLUGIN_PATH"));
-    open_diag_line("startup PATH", std::getenv("PATH"));
     // Mirror the file-playback position for IMU-replay gating (the IMU
     // window animates with the playback instead of jumping to the end).
     connect(&frame_pipeline_, &FramePipeline::file_position_changed, this,
@@ -199,16 +140,11 @@ bool CameraController::connect_serial(const std::string& serial) {
 }
 
 bool CameraController::connect_file(const std::string& path) {
-    open_diag_line("attempt", path.c_str());
-    open_diag_line("MV_HAL_PLUGIN_PATH", std::getenv("MV_HAL_PLUGIN_PATH"));
-    open_diag_line("HDF5_PLUGIN_PATH", std::getenv("HDF5_PLUGIN_PATH"));
     // Non-SDK formats (AEDAT4 / ALPDATA) never reach Metavision::Camera —
     // the external reader streams EventCD batches into the same pipeline.
     if (is_external_file_extension(path)) {
-        open_diag_line("branch", "external reader (AEDAT4/ALPDATA)");
         return connect_external_file(try_open_external_file(path));
     }
-    open_diag_line("branch", "Metavision::Camera::from_file");
     teardown();
     // OOM guard (audit §六-C2a): estimate the event count from the file
     // size BEFORE opening (RAW Evt3 ≈ 8 bytes/event) and warn if the
@@ -230,7 +166,6 @@ bool CameraController::connect_file(const std::string& path) {
         hints.real_time_playback(false);
         auto cam = Metavision::Camera::from_file(path, hints);
         setup_camera(std::move(cam), true);
-        open_diag_line("opened OK");
         if (estimated_events > kWarnEventCount) {
             emit runtime_warning(
                 tr("Very large file (est. %1M events): playback may use a "
@@ -238,7 +173,6 @@ bool CameraController::connect_file(const std::string& path) {
         }
         return true;
     } catch (const Metavision::CameraException& e) {
-        open_diag_line("FAILED with CameraException", e.what());
         emit disconnected();
         emit error(QString::fromUtf8(e.what()));
         return false;
@@ -1371,12 +1305,6 @@ void CameraController::setup_camera(Metavision::Camera&& cam, bool is_file) {
     is_file_ = is_file;
     camera_ = std::make_unique<Metavision::Camera>(std::move(cam));
     fetch_sensor_info();
-    { // TEMPORARY flip-switch diagnostics
-        char b[96];
-        std::snprintf(b, sizeof(b), "is_file=%d sensor=%dx%d", is_file ? 1 : 0,
-                      sensor_info_.width, sensor_info_.height);
-        open_diag_line("setup_camera", b);
-    }
 
     // Runtime error callback: file EOF, disconnects, firmware errors arrive here.
     // Capture the camera pointer: this callback's queued lambdas may execute
@@ -1510,7 +1438,6 @@ void CameraController::setup_camera(Metavision::Camera&& cam, bool is_file) {
 }
 
 void CameraController::teardown() {
-    open_diag_line("teardown begin"); // TEMPORARY flip-switch diagnostics
 #if GUI_HAVE_DAVIS
     // 0a. Stop the DAVIS stream and release the device first: its libusb
     //     thread feeds statistics_/frame_pipeline_ exactly like the SDK
