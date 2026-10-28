@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     const bool eof_mode = argc > 2 && std::string(argv[2]) == "eof";
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
 
     FileConfigHints hints;
     hints.real_time_playback(false);
@@ -32,6 +33,11 @@ int main(int argc, char** argv) {
     timestamp first_restart = -1;
 
     cam.add_runtime_error_callback([&](const CameraException&) { eof = true; });
+    // RAW files can end with a silent status change instead of a runtime
+    // error — treat STOPPED as EOF as well (this is what the GUI does).
+    cam.add_status_change_callback([&](const CameraStatus& s) {
+        if (s == CameraStatus::STOPPED) eof = true;
+    });
     cam.cd().add_callback([&](const EventCD* b, const EventCD* e) {
         if (phase == 0) {
             ++n_phase0;
