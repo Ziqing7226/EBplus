@@ -26,6 +26,7 @@
 #include <QPointer>
 #include <QString>
 #include <cstdint>
+#include <utility>
 
 #include <metavision/sdk/base/utils/timestamp.h>
 
@@ -69,6 +70,11 @@ public:
     const QString& current_file() const { return path_; }
     Metavision::timestamp duration_us() const;
     Metavision::timestamp position_us() const;
+    /// @brief Timeline range {first, last} event timestamp (us) of the open
+    /// file, {0, 0} when nothing is open. Cut output keeps source
+    /// timestamps (no re-basing), so cut dialogs need the real range.
+    std::pair<Metavision::timestamp, Metavision::timestamp> time_range_us()
+        const;
 
 signals:
     void opened(Metavision::timestamp duration_us);

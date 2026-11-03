@@ -142,15 +142,34 @@ void FileOpDialog::set_source(const QString& path) {
             edt_output_->setText(fi.dir().filePath(base + suffix));
         }
     }
-    // Duration hint for cut mode.
+    // Duration hint for cut mode. Prefill the REAL timeline [first, last]:
+    // the cutter does not re-base output timestamps, and the old hint
+    // (duration = last event timestamp) described neither the content
+    // length nor where the content sits on the timeline.
     if (lbl_duration_hint_ && converter_) {
-        const auto dur = converter_->duration_of(path);
-        if (dur > 0) {
+        const auto range = converter_->time_range_of(path);
+        if (range.second > 0) {
+            const auto content = range.second - range.first;
             lbl_duration_hint_->setText(
-                tr("Source duration: %1 us (%2 s)").arg(dur).arg(dur / 1.0e6, 0, 'f', 3));
-            spn_end_us_->setValue(static_cast<double>(dur));
+                tr("Content: %1 s (timeline %2 – %3 s)")
+                    .arg(content / 1.0e6, 0, 'f', 3)
+                    .arg(range.first / 1.0e6, 0, 'f', 3)
+                    .arg(range.second / 1.0e6, 0, 'f', 3));
+            if (spn_start_us_) {
+                spn_start_us_->setValue(static_cast<double>(range.first));
+            }
+            spn_end_us_->setValue(static_cast<double>(range.second));
         } else {
-            lbl_duration_hint_->setText(tr("Source duration: unknown"));
+            const auto dur = converter_->duration_of(path);
+            if (dur > 0) {
+                lbl_duration_hint_->setText(
+                    tr("Source duration: %1 us (%2 s)")
+                        .arg(dur)
+                        .arg(dur / 1.0e6, 0, 'f', 3));
+                spn_end_us_->setValue(static_cast<double>(dur));
+            } else {
+                lbl_duration_hint_->setText(tr("Source duration: unknown"));
+            }
         }
     }
     // CSV size warning (rough: raw ~12B/event, CSV ~20B/event → ~1.7x).

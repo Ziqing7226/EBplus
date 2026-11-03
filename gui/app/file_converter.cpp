@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <thread>
 
 #include <QFile>
@@ -336,6 +337,12 @@ void FileConverter::run_cut(const QString& src, const QString& dst,
     // we want, so it can stop early instead of consuming the whole file.
     std::atomic<bool> reached_end{false};
     std::atomic<bool> callback_error{false};
+    // Events actually handed to the writer. A window with zero events is a
+    // legitimate result, not an error — the writer's add_events returns
+    // false for an empty range (begin == end), so it must never be called
+    // with one; the post-loop check below turns written == 0 into a clear
+    // "no events" message instead of the generic callback-error text.
+    std::atomic<std::uint64_t> written_events{0};
     auto id = cam.cd().add_callback(
         [&](const Metavision::EventCD* b, const Metavision::EventCD* e) {
             if (cancel_) return;
@@ -352,12 +359,28 @@ void FileConverter::run_cut(const QString& src, const QString& dst,
                 if (end_us > 0 && it_begin != e && (e - 1)->t > end_us) {
                     auto it = it_begin;
                     while (it != e && it->t <= end_us) ++it;
-                    if (!writer.add_events(it_begin, it)) {
-                        callback_error.store(true, std::memory_order_release);
+                    // it == it_begin: the window holds no events (first
+                    // in-window timestamp already past end_us) — nothing
+                    // to write, not a write failure.
+                    if (it != it_begin) {
+                        if (!writer.add_events(it_begin, it)) {
+                            callback_error.store(true,
+                                                 std::memory_order_release);
+                        } else {
+                            written_events.fetch_add(
+                                static_cast<std::uint64_t>(it - it_begin),
+                                std::memory_order_relaxed);
+                        }
                     }
                     reached_end.store(true, std::memory_order_release);
-                } else if (!writer.add_events(it_begin, e)) {
-                    callback_error.store(true, std::memory_order_release);
+                } else if (it_begin != e) {
+                    if (!writer.add_events(it_begin, e)) {
+                        callback_error.store(true, std::memory_order_release);
+                    } else {
+                        written_events.fetch_add(
+                            static_cast<std::uint64_t>(e - it_begin),
+                            std::memory_order_relaxed);
+                    }
                 }
             } catch (const std::exception& ex) {
                 // Store error for the polling loop to pick up
@@ -410,6 +433,16 @@ void FileConverter::run_cut(const QString& src, const QString& dst,
         QFile::remove(dst);
         QMetaObject::invokeMethod(this, [this]() {
             emit failed(tr("Cut cancelled."));
+        }, Qt::QueuedConnection);
+        return;
+    }
+    if (written_events.load(std::memory_order_acquire) == 0) {
+        // Empty window: [start_us, end_us] holds no events (entirely before
+        // the first, after the last, or inside a gap). Not an error — drop
+        // the header-only output and say so.
+        QFile::remove(dst);
+        QMetaObject::invokeMethod(this, [this]() {
+            emit failed(tr("No events in the selected time window."));
         }, Qt::QueuedConnection);
         return;
     }
@@ -559,6 +592,11 @@ void FileConverter::run_cut_external(const QString& src, const QString& dst,
     std::string cb_error;
     std::mutex cb_mtx;
     std::atomic<bool> cb_error_flag{false};
+    // Events actually written; zero means the window held no events (a
+    // legitimate result — see the post-run check below). The writer's
+    // add_events returns false for an empty range (begin == end), so it
+    // must never be called with one.
+    std::atomic<std::uint64_t> written_events{0};
     const Metavision::timestamp span_us =
         (end_us > start_us) ? (end_us - start_us) : 0;
     // Distinguishes the natural early stop (window fully written) from a
@@ -589,13 +627,28 @@ void FileConverter::run_cut_external(const QString& src, const QString& dst,
                 if (end_us > 0 && it_begin != e && (e - 1)->t > end_us) {
                     auto it = it_begin;
                     while (it != e && it->t <= end_us) ++it;
-                    if (!writer.add_events(it_begin, it)) {
-                        cb_error_flag.store(true, std::memory_order_release);
+                    // it == it_begin: window holds no events — nothing to
+                    // write, not a write failure.
+                    if (it != it_begin) {
+                        if (!writer.add_events(it_begin, it)) {
+                            cb_error_flag.store(true,
+                                                std::memory_order_release);
+                        } else {
+                            written_events.fetch_add(
+                                static_cast<std::uint64_t>(it - it_begin),
+                                std::memory_order_relaxed);
+                        }
                     }
                     reached_end.store(true, std::memory_order_release);
                     source->request_stop(); // last wanted event reached
-                } else if (!writer.add_events(it_begin, e)) {
-                    cb_error_flag.store(true, std::memory_order_release);
+                } else if (it_begin != e) {
+                    if (!writer.add_events(it_begin, e)) {
+                        cb_error_flag.store(true, std::memory_order_release);
+                    } else {
+                        written_events.fetch_add(
+                            static_cast<std::uint64_t>(e - it_begin),
+                            std::memory_order_relaxed);
+                    }
                 }
                 if (span_us > 0) {
                     double r = static_cast<double>((e - 1)->t - start_us) /
@@ -637,6 +690,14 @@ void FileConverter::run_cut_external(const QString& src, const QString& dst,
         QFile::remove(dst);
         QMetaObject::invokeMethod(this, [this]() {
             emit failed(tr("Cut cancelled."));
+        }, Qt::QueuedConnection);
+        return;
+    }
+    if (written_events.load(std::memory_order_acquire) == 0) {
+        // Empty window: not an error — drop the header-only output.
+        QFile::remove(dst);
+        QMetaObject::invokeMethod(this, [this]() {
+            emit failed(tr("No events in the selected time window."));
         }, Qt::QueuedConnection);
         return;
     }

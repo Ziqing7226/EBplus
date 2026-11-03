@@ -261,6 +261,20 @@ Metavision::timestamp PlaybackController::position_us() const {
     return 0;
 }
 
+std::pair<Metavision::timestamp, Metavision::timestamp>
+PlaybackController::time_range_us() const {
+    if (path_.isEmpty()) {
+        return {0, 0};
+    }
+    auto* fp = controller_ ? controller_->frame_pipeline() : nullptr;
+    if (!fp) {
+        return {0, 0};
+    }
+    // last = duration_us() (absolute last event timestamp; the buffer's
+    // value dominates the OSC duration for non-zero-based cut files).
+    return {fp->file_first_us(), duration_us()};
+}
+
 Metavision::timestamp PlaybackController::query_duration() const {
     if (!available()) {
         return 0;

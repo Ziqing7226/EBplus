@@ -17,6 +17,7 @@
 #include <atomic>
 #include <functional>
 #include <thread>
+#include <utility>
 
 #include <metavision/sdk/base/utils/timestamp.h>
 
@@ -64,6 +65,27 @@ public:
         return duration_provider_ ? duration_provider_(src) : 0;
     }
 
+    /// @brief Provides the timeline range {first, last} event timestamp (us)
+    /// for a source path, or {0, 0} when unknown. Cut files keep the source
+    /// timestamps (no re-basing to 0), so a cut dialog must prefill the real
+    /// range — last alone (the old duration) is NOT enough.
+    void set_time_range_provider(
+        std::function<std::pair<Metavision::timestamp, Metavision::timestamp>(
+            const QString&)>
+            provider) {
+        time_range_provider_ = std::move(provider);
+    }
+
+    /// @brief Returns the provider's known {first, last} event timestamps for
+    /// @p src, or {0, 0}. last > 0 means the range is known.
+    std::pair<Metavision::timestamp, Metavision::timestamp>
+    time_range_of(const QString& src) const {
+        return time_range_provider_ ? time_range_provider_(src)
+                                    : std::make_pair(
+                                          static_cast<Metavision::timestamp>(0),
+                                          static_cast<Metavision::timestamp>(0));
+    }
+
     void cancel();
 
 signals:
@@ -83,6 +105,9 @@ private:
                           Metavision::timestamp start_us, Metavision::timestamp end_us);
 
     std::function<Metavision::timestamp(const QString&)> duration_provider_;
+    std::function<std::pair<Metavision::timestamp, Metavision::timestamp>(
+        const QString&)>
+        time_range_provider_;
     std::atomic<bool> running_{false};
     std::atomic<bool> cancel_{false};
     std::thread worker_;

@@ -355,4 +355,9 @@ Metavision::timestamp FramePipeline::file_duration_us() const {
     return 0;
 }
 
+Metavision::timestamp FramePipeline::file_first_us() const {
+    if (file_mode_) return file_generator_.first_us();
+    return 0;
+}
+
 } // namespace gui

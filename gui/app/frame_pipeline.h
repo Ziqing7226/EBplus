@@ -165,6 +165,9 @@ public:
     void set_file_loading_complete(bool complete);
     Metavision::timestamp file_position_us() const;
     Metavision::timestamp file_duration_us() const;
+    /// @brief First event timestamp of the current file (us), 0 if unknown.
+    /// Cut files keep source timestamps, so dialogs prefill the real range.
+    Metavision::timestamp file_first_us() const;
 
     std::uint16_t fps() const { return fps_; }
     Metavision::timestamp accumulation_time_us() const { return accumulation_us_; }

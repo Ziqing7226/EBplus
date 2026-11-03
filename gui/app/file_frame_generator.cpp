@@ -52,6 +52,18 @@ void FileFrameGenerator::add_events(const Metavision::EventCD* begin,
                     break;
                 }
             }
+            // First = the file's first event (first batch after clear()).
+            // CAS-set once; later batches and loader repositions never
+            // overwrite it, so it survives seeks and stays the true file
+            // start even when the streaming buffer trims its prefix.
+            Metavision::timestamp first_cur =
+                first_us_.load(std::memory_order_relaxed);
+            while (first_cur == 0) {
+                if (first_us_.compare_exchange_weak(
+                        first_cur, begin->t, std::memory_order_relaxed)) {
+                    break;
+                }
+            }
             if (streaming_) {
                 // A pending reposition is satisfied once events at/after the
                 // target have arrived.
@@ -247,6 +259,7 @@ void FileFrameGenerator::clear() {
         truncated_ = false;
     }
     duration_us_.store(0, std::memory_order_relaxed);
+    first_us_.store(0, std::memory_order_relaxed);
     // A new file is about to stream in: suspend EOF handling until the
     // loader signals completion (audit §六-P2).
     loading_complete_.store(false, std::memory_order_release);

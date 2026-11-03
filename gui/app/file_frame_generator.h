@@ -143,6 +143,14 @@ public:
 
     Metavision::timestamp position_us() const { return cursor_us_; }
     Metavision::timestamp duration_us() const;
+    /// @brief First buffered event's timestamp (us), 0 once reset. Set from
+    /// the first batch after clear(), so it stays the file's true first
+    /// event even after loader repositions. Cut files keep source
+    /// timestamps (no re-basing), so dialogs need this to prefill the
+    /// actual timeline range.
+    Metavision::timestamp first_us() const {
+        return first_us_.load(std::memory_order_relaxed);
+    }
     std::uint16_t fps() const { return fps_; }
     Metavision::timestamp accumulation_time_us() const { return accumulation_us_; }
     bool loop() const { return loop_; }
@@ -259,6 +267,8 @@ private:
     std::uint16_t fps_{30};
     Metavision::timestamp accumulation_us_{33000};
     std::atomic<Metavision::timestamp> duration_us_{0};
+    // First event timestamp of the current file (first batch after clear()).
+    std::atomic<Metavision::timestamp> first_us_{0};
     // True once the file loader has streamed the whole file (SDK file EOF).
     // Default true: with no loader attached (standalone tests, pre-filled
     // buffer) EOF handling works as before. clear() resets it to false.

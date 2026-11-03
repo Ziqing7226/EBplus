@@ -118,6 +118,16 @@ MainWindow::MainWindow(QWidget* parent)
         [this](const QString& src) -> Metavision::timestamp {
             return (src == playback_.current_file()) ? playback_.duration_us() : 0;
         });
+    // Cut dialogs prefill the REAL timeline range: cut output keeps the
+    // source timestamps (no re-basing to 0), so first/last are both needed.
+    file_converter_.set_time_range_provider(
+        [this](const QString& src)
+            -> std::pair<Metavision::timestamp, Metavision::timestamp> {
+            return (src == playback_.current_file())
+                       ? playback_.time_range_us()
+                       : std::make_pair(static_cast<Metavision::timestamp>(0),
+                                        static_cast<Metavision::timestamp>(0));
+        });
     // Let the file-operation dialogs prefill the source path with the
     // currently open file (same pattern as ExportDialog::set_source).
     if (auto* ft = settings_->file_tools_panel()) {
