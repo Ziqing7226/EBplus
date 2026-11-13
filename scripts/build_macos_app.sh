@@ -227,6 +227,7 @@ deploy_qt_runtime() {
         "$QT_PREFIX/lib/QtWidgets.framework" \
         "$QT_PREFIX/lib/QtOpenGL.framework" \
         "$QT_PREFIX/lib/QtOpenGLWidgets.framework" \
+        "$QTSERIALPORT_PREFIX/lib/QtSerialPort.framework" \
         "$QTSVG_PREFIX/lib/QtSvg.framework"; do
         copy_framework "$framework" "$frameworks_dir" || true
     done
@@ -275,7 +276,7 @@ deploy_qt_framework_dependencies() {
                         framework_name="${dep#@rpath/}"
                         framework_name="${framework_name%%/*}"
                         [[ -d "$frameworks_dir/$framework_name" ]] && continue
-                        for source_prefix in "$QT_PREFIX" "$QTSVG_PREFIX"; do
+                        for source_prefix in "$QT_PREFIX" "$QTSVG_PREFIX" "$QTSERIALPORT_PREFIX"; do
                             source_framework="$source_prefix/lib/$framework_name"
                             if [[ -d "$source_framework" ]]; then
                                 copy_framework "$source_framework" "$frameworks_dir" || true
@@ -387,6 +388,12 @@ copy_license_notices() {
         cp "$openeb_licenses/OPEN_SOURCE_3RDPARTY_NOTICES" \
             "$licenses_dir/OpenEB-OPEN_SOURCE_3RDPARTY_NOTICES.txt"
     fi
+    [[ -f "$CERES_PREFIX/LICENSE" ]] && cp "$CERES_PREFIX/LICENSE" "$licenses_dir/Ceres-LICENSE.txt"
+    local eigen_prefix notice
+    eigen_prefix="$(brew_prefix eigen)"
+    for notice in COPYING.MPL2 COPYING.APACHE COPYING.BSD COPYING.MINPACK COPYING.README; do
+        [[ -f "$eigen_prefix/$notice" ]] && cp "$eigen_prefix/$notice" "$licenses_dir/Eigen-$notice.txt"
+    done
 }
 
 clean_deployed_bundle_contents() {
@@ -440,6 +447,8 @@ require_cmd rsync
 BREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
 QT_PREFIX="${QT_PREFIX:-$(brew_prefix qtbase)}"
 QTSVG_PREFIX="${QTSVG_PREFIX:-$(brew_prefix qtsvg)}"
+QTSERIALPORT_PREFIX="${QTSERIALPORT_PREFIX:-$(brew_prefix qtserialport)}"
+CERES_PREFIX="${CERES_PREFIX:-$(brew_prefix ceres-solver)}"
 OPENCV_PREFIX="${OPENCV_PREFIX:-$(brew_prefix opencv)}"
 BOOST_PREFIX="${BOOST_PREFIX:-$(brew_prefix boost)}"
 LIBUSB_PREFIX="${LIBUSB_PREFIX:-$(brew_prefix libusb)}"
@@ -449,6 +458,9 @@ ABSEIL_PREFIX="${ABSEIL_PREFIX:-$(brew_prefix abseil)}"
 COMMON_PREFIX_PATH="$(cmake_prefix_path \
     "$BREW_PREFIX" \
     "$QT_PREFIX" \
+    "$QTSVG_PREFIX" \
+    "$QTSERIALPORT_PREFIX" \
+    "$CERES_PREFIX" \
     "$OPENCV_PREFIX" \
     "$BOOST_PREFIX" \
     "$LIBUSB_PREFIX" \

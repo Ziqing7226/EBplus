@@ -30,7 +30,8 @@ bool points_on_grid_radial(const std::vector<cv::Point2f>& pts, int cols, int ro
         const cv::Point2f v1 = b - a;
         const cv::Point2f v2 = c - b;
         const double n1 = cv::norm(v1), n2 = cv::norm(v2);
-        if (n1 < 1e-6 || n2 < 1e-6) return true;  // degenerate segment — skip
+        if (n1 < 4.0 || n2 < 4.0) return false;
+        if (n1 > 1.85 * n2 || n2 > 1.85 * n1) return false;
         const double dot = v1.x * v2.x + v1.y * v2.y;
         return dot / (n1 * n2) >= static_cast<double>(cos_max_angle);
     };
@@ -197,6 +198,19 @@ DetectionResult IntrinsicCalibration::detect_only(const cv::Mat& frame, bool ann
 
 void IntrinsicCalibration::accept(const std::vector<cv::Point2f>& points) {
     image_points_.push_back(points);
+}
+
+bool IntrinsicCalibration::accept_observation(const std::vector<cv::Point2f>& points,
+                                             cv::Size image_size) {
+    if (image_size.area() <= 0 || points.size() != static_cast<std::size_t>(board_size_.area()) ||
+        (image_size_.area() != 0 && image_size_ != image_size)) return false;
+    for (const auto& p : points) {
+        if (!std::isfinite(p.x) || !std::isfinite(p.y) || p.x < 0 || p.y < 0 ||
+            p.x >= image_size.width || p.y >= image_size.height) return false;
+    }
+    image_size_ = image_size;
+    image_points_.push_back(points);
+    return true;
 }
 
 void IntrinsicCalibration::remove_last_frame() {

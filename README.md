@@ -46,6 +46,13 @@ For Apple Silicon macOS, use the fork's `main` integration line and
 the [macOS build and test guide](doc/macos.md). The instructions below describe
 the upstream Linux environment.
 
+The fork also includes an independent **Tools > Multi-Camera...** workspace for
+three SilkyEvCam cameras: Trigger checks, guided intrinsic/extrinsic calibration,
+recording and shared-time RAW playback. See the
+[workflow and hardware acceptance checklist](doc/multi-camera.md).
+This fork additionally requires Qt SerialPort, Ceres 2.2+ and Eigen for the
+three-camera workflow, including when building on Linux.
+
 ```bash
 # Build
 cmake -B build -DCMAKE_BUILD_TYPE=Release

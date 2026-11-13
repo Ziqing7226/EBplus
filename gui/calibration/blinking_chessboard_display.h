@@ -30,8 +30,8 @@ namespace gui {
 /// @brief Renders the blinking chessboard calibration pattern.
 class BlinkingChessboardDisplay : public QWidget {
     Q_OBJECT
-public:
-    explicit BlinkingChessboardDisplay(QWidget* parent = nullptr);
+  public:
+    explicit BlinkingChessboardDisplay(QWidget *parent = nullptr);
 
     /// @brief Sets the board dimensions (INNER corner count: patternSize for
     /// cv::findChessboardCorners). The widget draws (cols+1)×(rows+1) squares.
@@ -49,15 +49,26 @@ public:
     /// @brief Current pixel size of one square.
     int square_px() const { return square_px_; }
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
+    /// Places the unchanged board within the available vertical margin.
+    /// 0.5 keeps the single-camera default centered; 1.0 uses the lower margin.
+    void set_vertical_placement(double placement);
+    double vertical_placement() const { return vertical_placement_; }
+    QRect board_rect() const {
+        return QRect(origin_x_, origin_y_, (cols_ + 1) * square_px_, (rows_ + 1) * square_px_);
+    }
 
-private slots:
+  signals:
+    void pattern_layout_changed();
+
+  protected:
+    void paintEvent(QPaintEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+
+  private slots:
     /// @brief 10 ms blink: toggles blink_frame_ and triggers a repaint.
     void on_blink_timeout();
 
-private:
+  private:
     void recompute_layout();
 
     int cols_{9};
@@ -65,6 +76,7 @@ private:
     int square_px_{0};
     int origin_x_{0};
     int origin_y_{0};
+    double vertical_placement_{0.5};
     float square_size_mm_{20.0f};
 
     /// Two pre-rendered frames for the 10 ms blink. Frame A is the chessboard
@@ -73,8 +85,8 @@ private:
     /// flip black↔white, the non-toggling squares stay white, the margin stays
     /// dark gray. recompute_layout() renders both; paintEvent() blits one — no
     /// per-frame drawing.
-    QPixmap pixmap_a_;  // chessboard: black squares on white board
-    QPixmap pixmap_b_;  // blank: all-white board
+    QPixmap pixmap_a_; // chessboard: black squares on white board
+    QPixmap pixmap_b_; // blank: all-white board
     /// Current blink frame (0 = A, 1 = B). Toggled by the blink timer.
     int blink_frame_{0};
     /// Last frame blitted to the backing store. When blink_frame_ differs,
@@ -83,7 +95,7 @@ private:
     int blitted_frame_{-1};
 
     /// 10 ms blink timer. Toggles blink_frame_ and calls update().
-    QTimer* blink_timer_{nullptr};
+    QTimer *blink_timer_{nullptr};
 };
 
 } // namespace gui

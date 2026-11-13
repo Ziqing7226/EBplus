@@ -20,6 +20,7 @@
 #include <QSet>
 #include <QSettings>
 #include <QStatusBar>
+#include <QStackedWidget>
 #include <QStyle>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -53,6 +54,7 @@
 #include "widgets/aps_window.h"
 #include "widgets/imu_window.h"
 #include "widgets/unified_roi_dialog.h"
+#include "multicam/workspace.h"
 
 namespace gui {
 
@@ -94,7 +96,9 @@ MainWindow::MainWindow(QWidget* parent)
     roi_zoom_cb_->setEnabled(false);  // enabled only while the unified ROI is active
     roi_bar->addWidget(roi_zoom_cb_);
     central_vbox->addLayout(roi_bar);
-    setCentralWidget(central);
+    workspace_stack_ = new QStackedWidget(this);
+    workspace_stack_->addWidget(central);
+    setCentralWidget(workspace_stack_);
     connect(roi_zoom_cb_, &QCheckBox::toggled, this, [this](bool on) {
         // When zooming, the whole view IS the ROI — hide the yellow overlay
         // frame (its sensor coordinates no longer map onto the cropped
@@ -251,6 +255,12 @@ MainWindow::MainWindow(QWidget* parent)
 MainWindow::~MainWindow() = default;
 
 void MainWindow::closeEvent(QCloseEvent* event) {
+    if (multi_workspace_ && !multi_workspace_->may_leave()) {
+        event->ignore();
+        statusBar()->showMessage(tr("Stop the multi-camera operation before closing."), 3000);
+        return;
+    }
+    if (multi_workspace_) set_multi_camera(false);
     if (layout_manager_) layout_manager_->save_default();
 
     // Mark shutdown in progress: the AlgoWindow `closing` handlers below
@@ -490,6 +500,7 @@ void MainWindow::build_menus() {
     // toggle button (§11.2 point 5). Playback panel toggle and layout actions
     // remain.
     auto* m_view = mb->addMenu(tr("&View"));
+    view_menu_ = m_view;
     auto* pb_toggle = m_view->addAction(tr("Toggle Playback Panel"));
     pb_toggle->setCheckable(true);
     pb_toggle->setChecked(false);
@@ -545,16 +556,61 @@ void MainWindow::build_menus() {
     // Algorithm-specific windows are opened from the sidebar's Algorithms
     // section, not duplicated here.
     auto* m_tools = mb->addMenu(tr("&Tools"));
+    auto* multi_action = m_tools->addAction(tr("Multi-Camera..."), this,
+                                          [this] { set_multi_camera(true); });
+    multi_action->setObjectName("actionMultiCamera");
     // Calibration (Phase 9) — launches the wizard lazily.
     m_tools->addAction(tr("&Intrinsic Wizard..."), this, &MainWindow::on_intrinsic_wizard);
     // Sharpness meter removed (Phase 5 step 2) — replaced by the Siemens-star
     // Focus Assistant.
     m_tools->addAction(tr("&Focus Assistant..."), this, &MainWindow::on_focus);
+    single_mode_actions_.push_back(m_file->menuAction());
+    for (auto* action : m_tools->actions()) {
+        if (action != multi_action) single_mode_actions_.push_back(action);
+    }
+    for (auto* action : m_view->actions()) single_mode_actions_.push_back(action);
 
     // Help
     auto* m_help = mb->addMenu(tr("&Help"));
     m_help->addAction(tr("&About"), this, &MainWindow::on_about);
     m_help->addAction(tr("About &Qt"), this, &QApplication::aboutQt);
+}
+
+void MainWindow::set_multi_camera(bool enabled) {
+    if (enabled) {
+        if (multi_workspace_) return;
+        if (recorder_.is_recording()) {
+            statusBar()->showMessage(tr("Stop recording before switching workspaces."), 3000);
+            return;
+        }
+        if (calibration_wizard_ || focus_dialog_) {
+            statusBar()->showMessage(tr("Close the single-camera calibration/focus tool first."), 3000);
+            return;
+        }
+        single_layout_ = saveState();
+        on_disconnect();
+        for (auto* dock : findChildren<QDockWidget*>(QString(), Qt::FindDirectChildrenOnly)) dock->hide();
+        multi_workspace_ = new multicam::Workspace(workspace_stack_);
+        multi_workspace_->select_workspace(multicam::WorkspaceModule::Capture);
+        workspace_stack_->addWidget(multi_workspace_);
+        workspace_stack_->setCurrentWidget(multi_workspace_);
+        multi_toolbox_action_ = multi_workspace_->toolbox_action();
+        view_menu_->addAction(multi_toolbox_action_);
+        for (auto* action : single_mode_actions_) action->setEnabled(false);
+        connect(multi_workspace_, &multicam::Workspace::leave_requested, this,
+                [this] { set_multi_camera(false); });
+        statusBar()->showMessage(tr("Multi-camera workspace"));
+    } else if (multi_workspace_) {
+        if (!multi_workspace_->may_leave()) return;
+        view_menu_->removeAction(multi_toolbox_action_);
+        multi_toolbox_action_ = nullptr;
+        workspace_stack_->setCurrentIndex(0);
+        delete multi_workspace_;
+        multi_workspace_ = nullptr;
+        restoreState(single_layout_);
+        for (auto* action : single_mode_actions_) action->setEnabled(true);
+        statusBar()->showMessage(tr("Single-camera layout restored. Hardware is disconnected."), 3000);
+    }
 }
 
 void MainWindow::build_status_bar() {

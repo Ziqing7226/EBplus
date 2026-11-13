@@ -93,6 +93,9 @@ public:
     /// frame of the configured geometry.
     void accept(const std::vector<cv::Point2f>& points);
 
+    /// Adds stored full-resolution corners without running image detection.
+    bool accept_observation(const std::vector<cv::Point2f>& points, cv::Size image_size);
+
     /// @brief Removes the most recently accepted observation (image + object
     /// points). Used by the wizard's "Delete this capture" button. No-op if empty.
     void remove_last_frame();

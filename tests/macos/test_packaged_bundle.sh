@@ -12,10 +12,17 @@ app_path="${1:-$repo_root/build/dist/EBplus.app}"
 
 codesign --verify --deep --strict "$app_path"
 
+[[ -f "$app_path/Contents/Frameworks/QtSerialPort.framework/Versions/A/QtSerialPort" ]] || {
+    printf 'Missing native Qt SerialPort runtime\n' >&2
+    exit 1
+}
+
 for notice in \
     EBplus-MIT.txt \
     OpenEB-LICENSE_OPEN.txt \
-    OpenEB-OPEN_SOURCE_3RDPARTY_NOTICES.txt; do
+    OpenEB-OPEN_SOURCE_3RDPARTY_NOTICES.txt \
+    Ceres-LICENSE.txt \
+    Eigen-COPYING.MPL2.txt; do
     [[ -f "$app_path/Contents/Resources/licenses/$notice" ]] || {
         printf 'Missing bundled license notice: %s\n' "$notice" >&2
         exit 1

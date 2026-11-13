@@ -56,9 +56,86 @@ QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
     border: 1px solid %accent%;
 }
 QSlider { background-color: transparent; border: none; }
+QSlider:horizontal { min-height: 24px; }
+QSlider::groove:horizontal {
+    height: 6px;
+    background: %border%;
+    border-radius: 3px;
+    margin: 0px 8px;
+}
+QSlider::sub-page:horizontal {
+    height: 6px;
+    background: %accent%;
+    border-radius: 3px;
+    margin: 0px 0px 0px 8px;
+}
+QSlider::add-page:horizontal {
+    height: 6px;
+    background: %border%;
+    border-radius: 3px;
+    margin: 0px 8px 0px 0px;
+}
+QSlider::handle:horizontal {
+    background: #FFFFFF;
+    border: 2px solid %accent%;
+    width: 14px;
+    height: 14px;
+    margin: -6px -7px;
+    border-radius: 9px;
+}
+QSlider::handle:horizontal:hover {
+    background: %accent%;
+    border: 2px solid #FFFFFF;
+}
+QSlider::handle:horizontal:disabled {
+    background: %bg-panel%;
+    border: 2px solid %fg-muted%;
+}
 
 QCheckBox, QRadioButton, QLabel { color: %fg-primary%; }
 QCheckBox:disabled, QRadioButton:disabled, QLabel:disabled { color: %fg-muted%; }
+
+QToolButton {
+    background-color: %bg-input%;
+    color: %fg-primary%;
+    border: 1px solid %border%;
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+QToolButton:hover    { background-color: %bg-hover%; color: %fg-primary%; }
+QToolButton:pressed  { background-color: %bg-panel%; color: %fg-primary%; }
+QToolButton:disabled { color: %fg-muted%; background-color: %bg-panel%; border: 1px solid %border%; }
+QToolButton[multiPrimary="true"] {
+    background-color: %accent%;
+    color: #FFFFFF;
+    border: 1px solid %accent%;
+    border-radius: 7px;
+    font-weight: bold;
+    padding: 6px 12px;
+}
+QToolButton[multiPrimary="true"]:hover {
+    background-color: %accent%;
+    color: #FFFFFF;
+}
+QToolButton[multiPrimary="true"]:disabled {
+    background-color: %bg-panel%;
+    color: %fg-muted%;
+    border: 1px solid %border%;
+}
+QToolButton[multiSubstepPill="true"] {
+    background-color: %bg-input%;
+    color: %fg-primary%;
+    border: 1px solid %border%;
+    border-radius: 5px;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+QToolButton[multiSubstepPill="true"]:checked {
+    background-color: %accent%;
+    color: #FFFFFF;
+    font-weight: bold;
+    border: 1px solid %accent%;
+}
 
 QToolBar { background-color: %bg-panel%; border: none; spacing: 2px; padding: 2px; }
 QToolBar QToolButton {

@@ -2,6 +2,10 @@
 
 find_package(GTest REQUIRED)
 
+add_executable(test_rig_calibration test_rig_calibration.cpp)
+target_link_libraries(test_rig_calibration PRIVATE gui_algo GTest::GTest GTest::Main)
+ebplus_gtest_discover_tests(test_rig_calibration)
+
 set(ALGO_TEST_COMPILE_OPTIONS -Wall -Wextra -Werror)
 if(APPLE)
     list(APPEND ALGO_TEST_COMPILE_OPTIONS

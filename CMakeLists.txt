@@ -25,7 +25,8 @@ if(APPLE)
 endif()
 
 # --- External dependencies -------------------------------------------------
-find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets Svg)
+find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets Svg SerialPort)
+find_package(Ceres 2.2 REQUIRED)
 find_package(MetavisionSDK 5.2.0 REQUIRED COMPONENTS base core stream)
 # OpenCV — calib3d was split into calib/3d/stereo in OpenCV 5.0; probe the
 # version first, then require the correct component names.

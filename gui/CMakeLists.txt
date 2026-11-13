@@ -3,6 +3,14 @@
 # Library sources (everything except main.cpp). Built once as a static library
 # so the unit tests in tests/ can link the same code without recompiling it.
 set(GUI_LIB_SOURCES
+    multicam/types.cpp
+    multicam/mcu_transport.cpp
+    multicam/camera_stream.cpp
+    multicam/buffered_camera.cpp
+    multicam/calibration.cpp
+    multicam/take.cpp
+    multicam/controller.cpp
+    multicam/workspace.cpp
     main_window.cpp
     app/aedat4_file_source.cpp
     app/alpdata_file_source.cpp
@@ -92,6 +100,7 @@ target_link_libraries(gui_core PUBLIC
     Qt6::OpenGL
     Qt6::OpenGLWidgets
     Qt6::Svg
+    Qt6::SerialPort
     gui_algo
 )
 

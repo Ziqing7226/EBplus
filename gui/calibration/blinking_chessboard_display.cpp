@@ -3,9 +3,10 @@
 #include "blinking_chessboard_display.h"
 
 #include <algorithm>
+#include <cmath>
 
-#include <QPainter>
 #include <QPaintEvent>
+#include <QPainter>
 #include <QResizeEvent>
 #include <QTimer>
 #include <QVector>
@@ -25,7 +26,7 @@ constexpr int kBlinkIntervalMs = 10;
 const QColor kBoardBg(96, 96, 96);
 } // namespace
 
-BlinkingChessboardDisplay::BlinkingChessboardDisplay(QWidget* parent) : QWidget(parent) {
+BlinkingChessboardDisplay::BlinkingChessboardDisplay(QWidget *parent) : QWidget(parent) {
     setAutoFillBackground(false);
     // We paint every pixel ourselves (dark-gray margin + board), so Qt can
     // skip its background fill — saves a memset on each repaint.
@@ -48,7 +49,7 @@ BlinkingChessboardDisplay::BlinkingChessboardDisplay(QWidget* parent) : QWidget(
 void BlinkingChessboardDisplay::set_pattern(int cols, int rows) {
     cols_ = std::max(1, cols);
     rows_ = std::max(1, rows);
-    pixmap_a_ = QPixmap();  // invalidate → force re-render even if size unchanged
+    pixmap_a_ = QPixmap(); // invalidate → force re-render even if size unchanged
     pixmap_b_ = QPixmap();
     recompute_layout();
     update();
@@ -59,13 +60,27 @@ void BlinkingChessboardDisplay::set_square_size_mm(float mm) {
     square_size_mm_ = std::max(0.1f, mm);
 }
 
-void BlinkingChessboardDisplay::resizeEvent(QResizeEvent* event) {
+void BlinkingChessboardDisplay::set_vertical_placement(double placement) {
+    if (!std::isfinite(placement))
+        return;
+    placement = std::clamp(placement, 0.0, 1.0);
+    if (vertical_placement_ == placement)
+        return;
+    vertical_placement_ = placement;
+    pixmap_a_ = QPixmap();
+    pixmap_b_ = QPixmap();
+    recompute_layout();
+    update();
+    emit pattern_layout_changed();
+}
+
+void BlinkingChessboardDisplay::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
     recompute_layout();
 }
 
 void BlinkingChessboardDisplay::on_blink_timeout() {
-    blink_frame_ ^= 1;  // toggle 0 ↔ 1
+    blink_frame_ ^= 1; // toggle 0 ↔ 1
     update();
 }
 
@@ -73,8 +88,8 @@ void BlinkingChessboardDisplay::recompute_layout() {
     // Skip the full pixmap re-render when the widget size has not changed and
     // both caches are still valid. Layout-param changes (cols/rows) invalidate
     // the pixmaps in their setters, so a param change still re-renders.
-    if (!pixmap_a_.isNull() && !pixmap_b_.isNull() &&
-        pixmap_a_.size() == size() && pixmap_b_.size() == size()) {
+    if (!pixmap_a_.isNull() && !pixmap_b_.isNull() && pixmap_a_.size() == size() &&
+        pixmap_b_.size() == size()) {
         return;
     }
     if (width() <= 0 || height() <= 0) {
@@ -95,7 +110,7 @@ void BlinkingChessboardDisplay::recompute_layout() {
     const int grid_w = sq_cols * square_px_;
     const int grid_h = sq_rows * square_px_;
     origin_x_ = (width() - grid_w) / 2;
-    origin_y_ = (height() - grid_h) / 2;
+    origin_y_ = int(std::round((height() - grid_h) * vertical_placement_));
 
     // The board itself is unchanged from the original pattern: BLACK squares
     // on a WHITE board area (checkerboard parity: (col+row) even = black), and
@@ -114,9 +129,8 @@ void BlinkingChessboardDisplay::recompute_layout() {
     for (int r = 0; r < sq_rows; ++r) {
         for (int c = 0; c < sq_cols; ++c) {
             if (((r + c) & 1) == 0) {
-                black_squares.append(QRect(origin_x_ + c * square_px_,
-                                           origin_y_ + r * square_px_,
-                                           square_px_, square_px_));
+                black_squares.append(
+                    QRect(origin_x_ + c * square_px_, origin_y_ + r * square_px_, square_px_, square_px_));
             }
         }
     }
@@ -128,7 +142,7 @@ void BlinkingChessboardDisplay::recompute_layout() {
         p.setRenderHint(QPainter::Antialiasing, false);
         p.setPen(Qt::NoPen);
         p.setBrush(Qt::white);
-        p.drawRect(board_rect);  // white board area on the dark-gray margin
+        p.drawRect(board_rect); // white board area on the dark-gray margin
         p.setBrush(Qt::black);
         if (!black_squares.isEmpty()) {
             p.drawRects(black_squares);
@@ -141,15 +155,15 @@ void BlinkingChessboardDisplay::recompute_layout() {
         p.setRenderHint(QPainter::Antialiasing, false);
         p.setPen(Qt::NoPen);
         p.setBrush(Qt::white);
-        p.drawRect(board_rect);  // blank: whole board area white
+        p.drawRect(board_rect); // blank: whole board area white
     }
 
-    blitted_frame_ = -1;  // force blit on next paintEvent
+    blitted_frame_ = -1; // force blit on next paintEvent
 }
 
-void BlinkingChessboardDisplay::paintEvent(QPaintEvent* event) {
+void BlinkingChessboardDisplay::paintEvent(QPaintEvent *event) {
     QPainter p(this);
-    const QPixmap& pm = (blink_frame_ == 0) ? pixmap_a_ : pixmap_b_;
+    const QPixmap &pm = (blink_frame_ == 0) ? pixmap_a_ : pixmap_b_;
     if (pm.isNull()) {
         p.fillRect(event->rect(), kBoardBg);
         return;

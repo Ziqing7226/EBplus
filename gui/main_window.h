@@ -62,8 +62,10 @@ class QAction;
 class QMenu;
 class QDockWidget;
 class QTimer;
+class QStackedWidget;
 
 namespace gui {
+namespace multicam { class Workspace; }
 
 class PlaybackControls;
 class ExportDialog;
@@ -85,6 +87,7 @@ protected:
 signals:
 
 private slots:
+    void set_multi_camera(bool enabled);
     void on_open_file();
     void on_connect_first();
     void on_disconnect();
@@ -135,6 +138,12 @@ private slots:
     void on_rec_blink();
 
 private:
+    QStackedWidget* workspace_stack_ = nullptr;
+    multicam::Workspace* multi_workspace_ = nullptr;
+    QAction* multi_toolbox_action_ = nullptr;
+    QMenu* view_menu_ = nullptr;
+    std::vector<QAction*> single_mode_actions_;
+    QByteArray single_layout_;
     void build_menus();
     void build_status_bar();
     void build_title_bar_controls();

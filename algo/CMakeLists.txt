@@ -4,6 +4,7 @@
 add_library(gui_algo STATIC
     common/frame_generator.cpp
     calibration/intrinsic.cpp
+    calibration/rig_calibration.cpp
 )
 
 target_include_directories(gui_algo PUBLIC
@@ -15,6 +16,7 @@ target_link_libraries(gui_algo PUBLIC
     MetavisionSDK::core
     MetavisionSDK::stream
     ${OpenCV_LIBS}
+    Ceres::ceres
 )
 
 # Optional: ONNX Runtime for E2VID neural-network inference.

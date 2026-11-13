@@ -11,6 +11,26 @@ include(GoogleTest)
 
 set(GUI_TEST_COMPILE_OPTS -Wall -Wextra)
 
+# Opt-in hardware diagnostic; never built by ALL or registered with CTest.
+add_executable(multicam_hardware_probe EXCLUDE_FROM_ALL multicam_hardware_probe.cpp)
+target_link_libraries(multicam_hardware_probe PRIVATE gui_core)
+target_compile_options(multicam_hardware_probe PRIVATE ${GUI_TEST_COMPILE_OPTS})
+
+add_executable(test_multicam
+    test_multicam.cpp
+    test_multicam_workflow.cpp
+    test_multicam_runtime.cpp
+    test_multicam_calibration_regression.cpp
+    test_multicam_buffered_camera.cpp
+    test_multicam_detection_performance.cpp
+    test_multicam_mcu.cpp
+    ../resources/icons.qrc
+    ../resources/theme.qrc
+)
+target_link_libraries(test_multicam PRIVATE gui_core GTest::GTest)
+target_compile_options(test_multicam PRIVATE ${GUI_TEST_COMPILE_OPTS})
+ebplus_gtest_discover_tests(test_multicam PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # --- test_theme_tokens: header-only token contrast check (no gui_core link). ---
 add_executable(test_theme_tokens
     test_theme_tokens.cpp
@@ -228,3 +248,25 @@ target_compile_options(test_davis_protocol PRIVATE ${GUI_TEST_COMPILE_OPTS})
 ebplus_gtest_discover_tests(test_davis_protocol
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )
+
+# Offline PIO regression: emit the real command builders without constructing
+# a transport, then execute them against a standard-library Python model.
+add_executable(mcu_command_dump
+    mcu_command_dump.cpp
+    ../multicam/mcu_transport.cpp
+)
+target_include_directories(mcu_command_dump PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+target_link_libraries(mcu_command_dump PRIVATE Qt6::Core Qt6::SerialPort)
+target_compile_options(mcu_command_dump PRIVATE ${GUI_TEST_COMPILE_OPTS})
+set_target_properties(mcu_command_dump PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME mcu_pio_model
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/mcu_pio_model.py"
+            --dumper "$<TARGET_FILE:mcu_command_dump>"
+    )
+    set_tests_properties(mcu_pio_model PROPERTIES TIMEOUT 60 LABELS "mcu;offline;no-hardware")
+else()
+    message(STATUS "Python3 interpreter not found: skipping offline MCU PIO model test")
+endif()

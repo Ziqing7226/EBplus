@@ -29,7 +29,7 @@ compatibility header supports OpenCV 4 and the OpenCV 5 module split:
 
 ```bash
 xcode-select --install
-brew install cmake qtbase qtsvg opencv boost libusb protobuf abseil gcc
+brew install cmake qtbase qtsvg qtserialport ceres-solver opencv boost libusb protobuf abseil gcc
 ```
 
 The packaging script reads Qt base frameworks and plugins from the `qtbase` prefix, and the Qt SVG runtime from the `qtsvg` prefix. EBplus links that runtime directly to render its activity-bar icons.
@@ -37,6 +37,7 @@ The packaging script reads Qt base frameworks and plugins from the `qtbase` pref
 ```bash
 export QT_PREFIX="$(brew --prefix qtbase)"
 export QTSVG_PREFIX="$(brew --prefix qtsvg)"
+export QTSERIALPORT_PREFIX="$(brew --prefix qtserialport)"
 ```
 
 ## Build The DMG
@@ -51,7 +52,7 @@ The script will:
 - configure and build `EBplus.app` in `build/macos-arm64`
 - copy the required Qt frameworks plus Cocoa, SVG/image format, icon, and style plugins
 - copy OpenEB runtime dylibs, HAL plugins, and HAL resources into the app bundle
-- copy EBplus and OpenEB licensing notices into the app bundle
+- copy EBplus, OpenEB, Ceres and Eigen licensing notices into the app bundle
 - rewrite non-system dylib references to bundle-relative paths
 - apply an ad-hoc signature
 - create `build/dist/EBplus-macos-arm64.dmg`
@@ -139,7 +140,7 @@ cmake -S . -B build/macos-tests \
   -DCMAKE_OSX_ARCHITECTURES=arm64 \
   -DGUI_FOR_OPENEB_BUILD_TESTS=ON \
   -DGUI_BUILD_TESTS=ON \
-  -DCMAKE_PREFIX_PATH="$PWD/build/openeb-install;$(brew --prefix)"
+  -DCMAKE_PREFIX_PATH="$PWD/build/openeb-install;$(brew --prefix);$(brew --prefix qtbase);$(brew --prefix qtsvg);$(brew --prefix qtserialport)"
 cmake --build build/macos-tests --parallel
 ctest --test-dir build/macos-tests --output-on-failure
 ```
